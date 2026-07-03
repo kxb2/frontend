@@ -36,4 +36,4 @@ interface FileUploadField extends BaseField {
   maxSizeMB?: number; // 업로드 용량 제한용
 }
 
-type StoryBoardFiled = TextAreaField | SelectField | FileUploadField;
+export type StoryBoardField = TextAreaField | SelectField | FileUploadField;
