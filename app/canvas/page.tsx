@@ -1,6 +1,6 @@
 import Header from '@/app/components/Header';
-import Canvas from './_components/canvas';
-import Toolbar from './_components/toolbar';
+import Canvas from '@/app/canvas/_components/canvas';
+import Toolbar from '@/app/canvas/_components/toolbar';
 
 export default function CanvasPage() {
   return (
