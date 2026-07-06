@@ -1,3 +1,5 @@
-export default function Home() {
-  return <h1>kxb2_frontend</h1>;
+import Storyboard from '@/app/storyboard/page';
+
+export default function Main() {
+  return <Storyboard />;
 }
