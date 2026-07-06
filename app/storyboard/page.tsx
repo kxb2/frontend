@@ -1,5 +1,7 @@
 import FormField from '@/app/components/FormField';
 import { storyboardFields } from '@/app/data/storyboardFields';
+import ImageGrid from '@/app/storyboard/image/imagegrid';
+import PromptBox from '@/app/storyboard/promptbox/propmptbox';
 
 export default function Storyboard() {
   return (
@@ -14,7 +16,15 @@ export default function Storyboard() {
         <button>스토리보드 생성하기</button>
       </div>
       <div>
-        <div>{/* output 공간 */}</div>
+        <div>
+          <span>9컷 결과물</span>
+          <button>내보내기</button>
+          <button>캔버스</button>
+        </div>
+        <div>
+          <ImageGrid />
+          <PromptBox />
+        </div>
       </div>
     </>
   );
