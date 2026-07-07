@@ -11,8 +11,22 @@ export default function StoryboardFormField({ field }: Props) {
   // textarea 글자수 세기 위한 state
   const [text, setText] = useState('');
 
+  // 선택한 이미지 미리보기
+  const [previews, setPreviews] = useState<string[]>([]);
+
   // 화면에 보이지 않지만 DOM 요소를 직접 조작하기 위함
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 파일 선택시 실행되는 함수
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 파일이 없는 경우 리턴
+    if (!e.target.files) return;
+    // URL.createObjectURL(file) -> 사용자가 고른 파일을 임시 URL로 변경하는 함수
+    // URL.revokeObjectURL(file) -> 이전에 만들어둔 임시 URL 정리하는 함수
+    previews.forEach((url) => URL.revokeObjectURL(url));
+    const urls = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+  };
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -57,11 +71,24 @@ export default function StoryboardFormField({ field }: Props) {
                 </svg>
                 이미지 추가
               </button>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-14 w-14 shrink-0 rounded-md border border-gray-200 bg-gray-100" />
-              ))}
+              {Array.from({ length: 10 }).map((_, i) =>
+                previews[i] ? (
+                  <div key={i} className="h-14 w-14 shrink-0 flex flex-col items-center justify-center gap-1 rounded-md border border-gray-200 bg-gray-300">
+                    <img src={previews[i]} alt={`참고 이미지 ${i + 1}`} className="h-full w-full object-cover" />
+                  </div>
+                ) : (
+                  <div key={i} className="h-14 w-14 shrink-0 flex flex-col items-center justify-center gap-1 rounded-md border border-gray-200 bg-gray-300">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M16 5H22M19 2V8M21 11.5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H12.5M21 14.9999L17.914 11.9139C17.5389 11.539 17.0303 11.3284 16.5 11.3284C15.9697 11.3284 15.4611 11.539 15.086 11.9139L6 20.9999M11 9C11 10.1046 10.1046 11 9 11C7.89543 11 7 10.1046 7 9C7 7.89543 7.89543 7 9 7C10.1046 7 11 7.89543 11 9Z"
+                        stroke="white"
+                      />
+                    </svg>
+                  </div>
+                )
+              )}
             </div>
-            <input ref={fileInputRef} type="file" accept={field.accept} multiple={(field.maxFiles ?? 1) > 1} className="hidden" />
+            <input ref={fileInputRef} type="file" accept={field.accept} multiple={(field.maxFiles ?? 1) > 1} onChange={handleFileChange} className="hidden" />
             <p className="mt-2 text-[11px] text-gray-400">이미지가 없어도 생성할 수 있어요! 텍스트만으로도 원하는 결과물을 만들어 드려요.</p>
           </div>
         )}
