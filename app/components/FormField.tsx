@@ -1,3 +1,6 @@
+'use client';
+
+import { useRef, useState } from 'react';
 import { StoryBoardField } from '@/types/input';
 
 interface Props {
@@ -5,11 +8,18 @@ interface Props {
 }
 
 export default function StoryboardFormField({ field }: Props) {
-  return (
-    <div className="border border-gray-200">
-      <div className="border-b border-gray-200 px-3 py-2 text-sm text-gray-500 text-center">{field.description ?? '기능 설명'}</div>
+  // textarea 글자수 세기 위한 state
+  const [text, setText] = useState('');
 
-      <div className="p-3">
+  // 화면에 보이지 않지만 DOM 요소를 직접 조작하기 위함
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+      <div className="text-sm font-semibold text-gray-900">{field.label}</div>
+      <div className="mt-1 text-xs text-gray-400">{field.description}</div>
+
+      <div className="mt-3">
         {/* 타입이 시나리오인 경우 */}
         {field.type === 'textarea' && <textarea className="w-full h-24 text-sm p-2 border border-gray-200 rounded resize-none" placeholder={field.placeholder} />}
 
