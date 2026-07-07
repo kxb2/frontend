@@ -10,8 +10,10 @@ export default function ImageGrid() {
   const cellIndexes = Array.from({ length: cellCount }, (a, index) => index);
   // cellIndexes 는 결과적으로 [0, 1, 2, 3, 4, 5, 6, 7, 8] 이런 배열이 됨
 
+  // imagegrid.tsx
+  // imagegrid.tsx
   return (
-    <div className="max-w-xl grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 grid-rows-3 gap-3 flex-1 min-h-0">
       {cellIndexes.map((cellIndex) => (
         <ImageCell key={cellIndex} />
       ))}
