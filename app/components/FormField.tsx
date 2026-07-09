@@ -12,7 +12,7 @@ export default function StoryboardFormField({ field }: Props) {
   const [text, setText] = useState('');
 
   // 선택한 이미지 미리보기
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
 
   // 화면에 보이지 않지만 DOM 요소를 직접 조작하기 위함
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,11 +21,19 @@ export default function StoryboardFormField({ field }: Props) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // 파일이 없는 경우 리턴
     if (!e.target.files) return;
+    // 이미 추가된 파일명은 제외
+    const existingNames = previews.map((p) => p.file.name);
+    // 같은 이름의 파일이 아니라면 새로운 파일로 추가
+    const newFiles = Array.from(e.target.files).filter((file) => !existingNames.includes(file.name));
     // URL.createObjectURL(file) -> 사용자가 고른 파일을 임시 URL로 변경하는 함수
-    // URL.revokeObjectURL(file) -> 이전에 만들어둔 임시 URL 정리하는 함수
-    previews.forEach((url) => URL.revokeObjectURL(url));
-    const urls = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
-    setPreviews(urls);
+    const newPreviews = newFiles.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    // 기존 미리보기 목록 뒤에 새로 고른 파일들을 이어붙임
+    setPreviews((prev) => [...prev, ...newPreviews]);
+    // 같은 파일을 다시 선택해도 onChange가 또 실행되도록 입력값 초기화
+    e.target.value = '';
   };
 
   return (
@@ -74,7 +82,7 @@ export default function StoryboardFormField({ field }: Props) {
               {Array.from({ length: 10 }).map((_, i) =>
                 previews[i] ? (
                   <div key={i} className="h-14 w-14 shrink-0 flex flex-col items-center justify-center gap-1 rounded-md border border-gray-200 bg-gray-300">
-                    <img src={previews[i]} alt={`참고 이미지 ${i + 1}`} className="h-full w-full object-cover" />
+                    <img src={previews[i].url} alt={`참고 이미지 ${i + 1}`} className="h-full w-full object-cover" />
                   </div>
                 ) : (
                   <div key={i} className="h-14 w-14 shrink-0 flex flex-col items-center justify-center gap-1 rounded-md border border-gray-200 bg-gray-300">
