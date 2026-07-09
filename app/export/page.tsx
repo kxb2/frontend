@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Header from '@/app/components/Header';
 import { mockStoryboardResult } from '@/app/data/mockStoryboardResult';
 import PreviewGrid from '@/app/export/_components/PreviewGrid';
 import PreviewPrompts from '@/app/export/_components/PreviewPrompts';
@@ -34,27 +33,24 @@ export default function ExportSandboxPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header />
-      <div className="flex-1 min-h-0 p-4 flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold">내보내기 기능 확인 (F-05 / F-06)</span>
-          <div className="flex gap-2">
-            <button onClick={handlePdfExport} className="border border-gray-300 px-3 py-1.5 text-sm">
-              PDF 내보내기
-            </button>
-            <button onClick={handleImageExport} className="border border-gray-300 px-3 py-1.5 text-sm">
-              이미지 내보내기
-            </button>
-          </div>
+    <div className="flex-1 min-h-0 p-4 flex flex-col gap-4">
+      <div className="flex justify-between items-center">
+        <span className="text-lg font-semibold">내보내기 기능 확인 (F-05 / F-06)</span>
+        <div className="flex gap-2">
+          <button onClick={handlePdfExport} className="border border-gray-300 px-3 py-1.5 text-sm">
+            PDF 내보내기
+          </button>
+          <button onClick={handleImageExport} className="border border-gray-300 px-3 py-1.5 text-sm">
+            이미지 내보내기
+          </button>
         </div>
+      </div>
 
-        {status && <span className="text-sm text-gray-500">{status}</span>}
+      {status && <span className="text-sm text-gray-500">{status}</span>}
 
-        <div className="max-w-3xl flex flex-col gap-3">
-          <PreviewGrid cuts={result.cuts} />
-          <PreviewPrompts shots={result.shots} />
-        </div>
+      <div className="max-w-3xl flex flex-col gap-3">
+        <PreviewGrid cuts={result.cuts} />
+        <PreviewPrompts shots={result.shots} />
       </div>
     </div>
   );
