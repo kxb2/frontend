@@ -16,8 +16,8 @@ export const storyboardFields: StoryBoardField[] = [
     label: '2. 분위기 선택',
     description: '분위기나 장르를 선택해주세요.',
     options: [
-      { label: '로맨스', value: 'romance' },
-      { label: 'SF', value: 'sf' },
+      { label: '로맨스', value: 'ROMANCE' },
+      { label: 'SF', value: 'SF' },
     ],
   },
   {

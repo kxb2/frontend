@@ -5,9 +5,10 @@ import { StoryBoardField } from '@/types/input';
 
 interface Props {
   field: StoryBoardField;
+  onFieldChange: (id: string, value: string | File[]) => void;
 }
 
-export default function StoryboardFormField({ field }: Props) {
+export default function StoryboardFormField({ field, onFieldChange }: Props) {
   // textarea 글자수 세기 위한 state
   const [text, setText] = useState('');
 
@@ -32,6 +33,8 @@ export default function StoryboardFormField({ field }: Props) {
     }));
     // 기존 미리보기 목록 뒤에 새로 고른 파일들을 이어붙임
     setPreviews((prev) => [...prev, ...newPreviews]);
+    onFieldChange(field.id, [...previews.map((p) => p.file), ...newFiles]);
+
     // 같은 파일을 다시 선택해도 onChange가 또 실행되도록 입력값 초기화
     e.target.value = '';
   };
@@ -45,7 +48,16 @@ export default function StoryboardFormField({ field }: Props) {
         {/* 타입이 시나리오인 경우 */}
         {field.type === 'textarea' && (
           <div className="relative">
-            <textarea className="h-24 w-full resize-none rounded-lg border border-gray-200 p-2 text-sm" placeholder={field.placeholder} maxLength={field.maxLength} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea
+              className="h-24 w-full resize-none rounded-lg border border-gray-200 p-2 text-sm"
+              placeholder={field.placeholder}
+              maxLength={field.maxLength}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                onFieldChange(field.id, e.target.value);
+              }}
+            />
             {field.maxLength && (
               <span className="absolute bottom-2 right-2 text-[11px] text-gray-300">
                 {text.length}/{field.maxLength}
@@ -59,7 +71,8 @@ export default function StoryboardFormField({ field }: Props) {
           <div className="flex flex-row flex-wrap gap-2">
             {field.options.map((opt) => (
               <label key={opt.value} className="cursor-pointer">
-                <input type="radio" name={field.id} value={opt.value} className="peer sr-only" />
+                <input type="radio" name={field.id} value={opt.value} className="peer sr-only" onChange={() => onFieldChange(field.id, opt.value)} />
+
                 <span className="inline-block rounded-full border border-gray-200 px-4 py-1.5 text-sm text-gray-600 peer-checked:border-purple-500 peer-checked:bg-purple-50 peer-checked:font-semibold peer-checked:text-purple-600">{opt.label}</span>
               </label>
             ))}
