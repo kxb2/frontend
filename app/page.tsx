@@ -1,5 +1,5 @@
-import Storyboard from '@/app/storyboard/page';
+import { redirect } from 'next/navigation';
 
 export default function Main() {
-  return <Storyboard />;
+  redirect('/storyboard');
 }

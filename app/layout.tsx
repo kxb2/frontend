@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
+import Header from "@/app/components/Header";
 import "./globals.css";
 
 // 영문(Inter)
@@ -24,7 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${inter.variable} ${pretendard.variable}`}>
-      <body>{children}</body>
+      <body className="flex h-screen flex-col">
+        <Header />
+        {children}
+      </body>
     </html>
   );
 }
