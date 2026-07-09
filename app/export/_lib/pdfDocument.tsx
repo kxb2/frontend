@@ -3,20 +3,17 @@
 import { Document, Page, View, Text, Image as PdfImage, StyleSheet, Font } from '@react-pdf/renderer';
 import { StoryboardResult } from '@/types/ai';
 
-// PDF용 한글 폰트
+// PDF용 한글 폰트 (TTF)
 Font.register({
-  family: 'IBMPlexSansKR',
-  fonts: [
-    { src: '/fonts/IBMPlexSansKR-Regular.ttf', fontWeight: 'normal' },
-    { src: '/fonts/IBMPlexSansKR-Bold.ttf', fontWeight: 'bold' },
-  ],
+  family: 'Pretendard',
+  src: '/fonts/PretendardVariable.ttf',
 });
 
 const styles = StyleSheet.create({
   page: {
     padding: 32,
     fontSize: 10,
-    fontFamily: 'IBMPlexSansKR',
+    fontFamily: 'Pretendard',
   },
   title: {
     fontSize: 16,
@@ -51,7 +48,6 @@ const styles = StyleSheet.create({
   },
   shotNumber: {
     width: 60,
-    fontWeight: 'bold',
   },
   shotDescription: {
     flex: 1,
