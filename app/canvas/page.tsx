@@ -1,16 +1,14 @@
-import Header from '@/app/components/Header';
 import Canvas from '@/app/canvas/_components/canvas';
 import Toolbar from '@/app/canvas/_components/toolbar';
 
 export default function CanvasPage() {
   return (
-    <div>
-      <Header />
-      <main className="p-4">
-        <p className="mb-4 text-sm text-gray-600">캔버스 창</p>
+    <main className="flex-1 min-h-0 flex flex-col p-4">
+      <p className="mb-4 text-sm text-gray-600 shrink-0">캔버스 창</p>
+      <div className="flex-1 min-h-0">
         <Canvas />
-        <Toolbar />
-      </main>
-    </div>
+      </div>
+      <Toolbar />
+    </main>
   );
 }
