@@ -1,6 +1,15 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // SVG를 import하면 React 컴포넌트로 변환(SVGR). 아이콘 관리용
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
   // 외부 이미지를 가져와서 next/image로 쓰기 위함
   images: {
     remotePatterns: [
