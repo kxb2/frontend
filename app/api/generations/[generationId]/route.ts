@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ gene
   // return Response.json(data, { status: backendResponse.status });
 
   // 임시 mock 데이터 (백엔드 연동 전까지 사용) - 3번째 조회부터 완료된 것처럼 응답
-  // ai로 임시로 생성한 코드라 백엔드 주소 연결 후에는 코드 삭제 예정
+  // ai를 통해 테스트용 코드를 생성한 것이라 백엔드 주소 연결 후에는 코드 삭제 예정
   const callCount = (mockCallCounts.get(generationId) ?? 0) + 1;
   mockCallCounts.set(generationId, callCount);
 
