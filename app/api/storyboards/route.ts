@@ -16,14 +16,23 @@ export async function POST(request: Request) {
   // 클라이언트가 보낸 FormData(시나리오, 장르, 레퍼런스)를 그대로 받음
   const formData = await request.formData();
 
+  // 잘 받았는지 터미널에서 확인용
+  console.log('받은 시나리오:', formData.get('scenario'));
+  console.log('받은 장르:', formData.get('genre'));
+  console.log('받은 레퍼런스 이미지 개수:', formData.getAll('referenceImages').length);
+
   // 서버 쪽에서 실제 백엔드로 그대로 전달
-  const backendResponse = await fetch(`${process.env.BACKEND_API_URL}/storyboards`, {
-    method: 'POST',
-    body: formData,
+  // const backendResponse = await fetch(`${process.env.BACKEND_API_URL}/storyboards`, {
+  //   method: 'POST',
+  //   body: formData,
+  // });
+  // const data = await backendResponse.json();
+  // return Response.json(data, { status: backendResponse.status });
+
+  // 임시 mock 데이터 (백엔드 연동 전까지 사용)
+  return Response.json({
+    storyboardId: 1,
+    generationId: 100,
+    status: 'pending',
   });
-
-  const data = await backendResponse.json();
-
-  // 백엔드 응답을 클라이언트에게 그대로 전달
-  return Response.json(data, { status: backendResponse.status });
 }

@@ -6,15 +6,59 @@ import Header from '@/app/components/Header';
 import { storyboardFields } from '@/app/data/storyboardFields';
 import ImageGrid from '@/app/storyboard/image/imagegrid';
 import PromptBox from '@/app/storyboard/promptbox/propmptbox';
+import { createStoryboard, getGeneration } from '@/app/api/storyboard/api';
+import { GenerationResult } from '@/types/api';
 
 // page.tsx
 export default function Storyboard() {
   // 필드 id 별로 값을 모아두는 state(ex: {scenario: '...', genre: 'ROMANCE', reference: [File, File]})
   const [formValues, setFormValues] = useState<Record<string, string | File[]>>({});
 
+  // 9컷 생성 결과 (완료되면 여기에 저장)
+  const [generation, setGeneration] = useState<GenerationResult | null>(null);
+  // 버튼 눌렀을 때 로딩 상태
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // 필드의 데이터를 가져오는 함수
   const handleFieldChange = (id: string, value: string | File[]) => {
     setFormValues((prev) => ({ ...prev, [id]: value }));
+  };
+
+  // generationId로 상태를 반복 조회하다가, 완료되면 결과를 저장
+  const pollGeneration = async (generationId: number, attempt = 0): Promise<void> => {
+    if (attempt > 30) {
+      throw new Error('생성 시간이 너무 오래 걸립니다.');
+    }
+
+    const result = await getGeneration(generationId);
+
+    if (result.status === 'COMPLETED') {
+      setGeneration(result);
+      return;
+    }
+
+    // 아직 진행 중이면 2초 뒤에 다시 확인
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await pollGeneration(generationId, attempt + 1);
+  };
+
+  // 스토리보드 만들기 버튼 클릭 시 실행
+  const handleSubmit = async () => {
+    if (!formValues.scenario || !formValues.genre) {
+      alert('시나리오와 장르는 필수입니다.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { generationId } = await createStoryboard(formValues);
+      await pollGeneration(generationId);
+    } catch (error) {
+      console.error(error);
+      alert('스토리보드 생성에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -28,8 +72,8 @@ export default function Storyboard() {
               <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
             ))}
           </div>
-          <button className="mt-auto" onClick={() => console.log(formValues)}>
-            스토리보드 생성하기
+          <button className="mt-auto" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? '생성 중...' : '스토리보드 생성하기'}
           </button>
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
@@ -41,8 +85,8 @@ export default function Storyboard() {
             </div>
           </div>
           <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2">
-            <ImageGrid />
-            <PromptBox />
+            <ImageGrid cuts={generation?.cuts} />
+            <PromptBox promptText={generation?.integratedPrompt ?? undefined} />
           </div>
         </div>
       </div>

@@ -1,6 +1,11 @@
 import ImageCell from '@/app/storyboard/image/imagecell';
+import { Cut } from '@/types/api';
 
-export default function ImageGrid() {
+interface ImageGridProps {
+  cuts?: Cut[];
+}
+
+export default function ImageGrid({ cuts = [] }: ImageGridProps) {
   const cellCount = 9;
   /*
   Array.from: 배열을 만들어내는 함수(length는 배열의 길이)
@@ -10,12 +15,10 @@ export default function ImageGrid() {
   const cellIndexes = Array.from({ length: cellCount }, (a, index) => index);
   // cellIndexes 는 결과적으로 [0, 1, 2, 3, 4, 5, 6, 7, 8] 이런 배열이 됨
 
-  // imagegrid.tsx
-  // imagegrid.tsx
   return (
     <div className="grid grid-cols-3 grid-rows-3 gap-3 flex-1 min-h-0">
       {cellIndexes.map((cellIndex) => (
-        <ImageCell key={cellIndex} />
+        <ImageCell key={cellIndex} imageUrl={cuts[cellIndex]?.imageUrl} />
       ))}
     </div>
   );
