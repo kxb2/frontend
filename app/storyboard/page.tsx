@@ -82,6 +82,7 @@ export default function Storyboard() {
               <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
             ))}
           </div>
+          {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
           <button className="mt-auto flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-3 text-sm font-semibold text-white disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
