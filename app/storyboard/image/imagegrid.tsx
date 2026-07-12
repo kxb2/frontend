@@ -18,7 +18,7 @@ export default function ImageGrid({ cuts = [] }: ImageGridProps) {
   return (
     <div className="grid grid-cols-3 grid-rows-3 gap-3 flex-1 min-h-0">
       {cellIndexes.map((cellIndex) => (
-        <ImageCell key={cellIndex} imageUrl={cuts[cellIndex]?.imageUrl} />
+        <ImageCell key={cellIndex} shotNumber={cellIndex + 1} imageUrl={cuts[cellIndex]?.imageUrl} />
       ))}
     </div>
   );
