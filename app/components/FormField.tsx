@@ -29,20 +29,28 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   const [aspectRatio, setAspectRatio] = useState('');
   const [era, setEra] = useState('');
 
+  // 최대 업로드 가능 장수, 꽉 찼는지 여부
+  const maxFiles = field.type === 'fileUpload' ? (field.maxFiles ?? 10) : 10;
+  const isFull = previews.length >= maxFiles;
+
   // 파일 목록을 받아 미리보기에 추가하는 공용 함수(input 선택 / 드래그앤드롭 공용)
   const addFiles = (fileList: FileList) => {
     // 이미 추가된 파일명은 제외
     const existingNames = previews.map((p) => p.file.name);
     // 같은 이름의 파일이 아니라면 새로운 파일로 추가
     const newFiles = Array.from(fileList).filter((file) => !existingNames.includes(file.name));
+    // 남은 슬롯 수만큼만 받아들여서 최대 장수를 넘지 않도록 함
+    const remainingSlots = maxFiles - previews.length;
+    // slice(a, b) -> a ~ b까지 복사한 배열을 반환한다.
+    const limitedFiles = newFiles.slice(0, remainingSlots);
     // URL.createObjectURL(file) -> 사용자가 고른 파일을 임시 URL로 변경하는 함수
-    const newPreviews = newFiles.map((file) => ({
+    const newPreviews = limitedFiles.map((file) => ({
       file,
       url: URL.createObjectURL(file),
     }));
     // 기존 미리보기 목록 뒤에 새로 고른 파일들을 이어붙임
     setPreviews((prev) => [...prev, ...newPreviews]);
-    onFieldChange(field.id, [...previews.map((p) => p.file), ...newFiles]);
+    onFieldChange(field.id, [...previews.map((p) => p.file), ...limitedFiles]);
   };
 
   // 파일 선택시 실행되는 함수
@@ -58,7 +66,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); // 브라우저 기본 동작 막기
     setIsDragging(false); // 드래그 해제
-    if (!e.dataTransfer.files) return;
+    if (isFull || !e.dataTransfer.files) return;
     addFiles(e.dataTransfer.files); // input 선택과 동일한 로직 재사용
   };
 
@@ -175,7 +183,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
         {field.type === 'fileUpload' && (
           <div>
             <p className="mb-2 text-[11px] text-gray-500">
-              {previews.length} / {field.maxFiles ?? 10} 업로드됨
+              {previews.length} / {maxFiles} 업로드됨
             </p>
 
             {previews.length === 0 ? (
@@ -188,7 +196,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors ${isDragging ? 'border-purple-300 bg-[#1C1F2A]' : 'border-white-700 '}`}
+                className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed p-2 text-center transition-colors ${isDragging ? 'border-purple-300 bg-[#1C1F2A]' : 'border-white-700 '}`}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#1C1F2A]">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -199,38 +207,29 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-gray-200">이미지를 끌어다 놓거나 클릭해서 추가</p>
-                <p className="text-xs text-gray-500">캐릭터, 배경, 소품 등 · 최대 {field.maxFiles ?? 10}장</p>
+                <p className="text-xs text-gray-500">캐릭터, 배경, 소품 등 · 최대 {maxFiles}장</p>
               </div>
             ) : (
               // 이미지 추가 후: 그리드 UI (+ 버튼 또는 드래그로 추가)
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
-                  setIsDragging(true);
+                  if (!isFull) setIsDragging(true);
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                className={`flex flex-wrap gap-2 rounded-lg p-1 transition-colors ${isDragging ? 'bg-[#1C1F2A]' : ''}`}
+                className={`flex flex-nowrap gap-2 overflow-x-auto rounded-lg p-1 pb-2 transition-colors scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent ${
+                  isDragging ? 'bg-[#1C1F2A]' : ''
+                }`}
               >
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-neutral-700 bg-[#1C1F2A] text-lg text-gray-300">
+                <button type="button" onClick={() => !isFull && fileInputRef.current?.click()} disabled={isFull} className="flex h-18 w-18 shrink-0 items-center justify-center rounded-md border border-neutral-700 bg-[#1C1F2A] text-lg text-gray-300 disabled:cursor-not-allowed">
                   +
                 </button>
-                {Array.from({ length: field.maxFiles ?? 10 }).map((_, i) =>
-                  previews[i] ? (
-                    <div key={i} className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-neutral-700 bg-[#1C1F2A]">
-                      <img src={previews[i].url} alt={`참고 이미지 ${i + 1}`} className="h-full w-full object-cover" />
-                    </div>
-                  ) : (
-                    <div key={i} className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-neutral-700 bg-[#1C1F2A]">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M21 14.9999L17.914 11.9139C17.5389 11.539 17.0303 11.3284 16.5 11.3284C15.9697 11.3284 15.4611 11.539 15.086 11.9139L6 20.9999M5 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3ZM11 9C11 10.1046 10.1046 11 9 11C7.89543 11 7 10.1046 7 9C7 7.89543 7.89543 7 9 7C10.1046 7 11 7.89543 11 9Z"
-                          stroke="white"
-                        />
-                      </svg>
-                    </div>
-                  )
-                )}
+                {previews.map((preview, i) => (
+                  <div key={preview.url} className="h-18 w-18 shrink-0 overflow-hidden rounded-md border border-neutral-700 bg-[#1C1F2A]">
+                    <img src={preview.url} alt={`참고 이미지 ${i + 1}`} className="h-full w-full object-cover" />
+                  </div>
+                ))}
               </div>
             )}
 
