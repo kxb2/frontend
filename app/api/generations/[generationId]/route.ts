@@ -1,5 +1,4 @@
-// 임시 mock용: generationId별로 몇 번 조회됐는지 기록 (서버 재시작하면 초기화됨)
-const mockCallCounts = new Map<string, number>();
+import { getGenerationResult } from '@/app/api/storyboard/store';
 
 export async function GET(request: Request, { params }: { params: Promise<{ generationId: string }> }) {
   // URL의 [generationId] 부분 꺼내기 (예: /api/generations/100 → generationId = "100")
@@ -10,38 +9,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ gene
   // const data = await backendResponse.json();
   // return Response.json(data, { status: backendResponse.status });
 
-  // 임시 mock 데이터 (백엔드 연동 전까지 사용) - 3번째 조회부터 완료된 것처럼 응답
-  // ai를 통해 테스트용 코드를 생성한 것이라 백엔드 주소 연결 후에는 코드 삭제 예정
-  const callCount = (mockCallCounts.get(generationId) ?? 0) + 1;
-  mockCallCounts.set(generationId, callCount);
+  // POST /api/storyboards가 저장해둔 실제 생성 결과를 꺼내서 반환
+  const result = getGenerationResult(Number(generationId));
 
-  if (callCount < 3) {
-    return Response.json({
-      generationId: Number(generationId),
-      storyboardId: 1,
-      status: 'PENDING',
-      gridImageUrl: null,
-      integratedPrompt: null,
-      cuts: [],
-      errorMessage: null,
-    });
+  if (!result) {
+    return Response.json({ message: '존재하지 않는 생성 결과입니다.' }, { status: 404 });
   }
 
-  const cuts = Array.from({ length: 9 }, (_, i) => ({
-    cutId: i + 1,
-    shotNumber: i + 1,
-    imageUrl: `https://picsum.photos/seed/${generationId}-${i + 1}/400/400`,
-    prompt: `Shot ${i + 1}: 임시 프롬프트 텍스트입니다.`,
-    status: 'COMPLETED',
-  }));
-
-  return Response.json({
-    generationId: Number(generationId),
-    storyboardId: 1,
-    status: 'COMPLETED',
-    gridImageUrl: `https://picsum.photos/seed/${generationId}/900/900`,
-    integratedPrompt: 'Shot 1: ...\nShot 2: ...',
-    cuts,
-    errorMessage: null,
-  });
+  return Response.json(result);
 }

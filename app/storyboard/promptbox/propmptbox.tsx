@@ -35,7 +35,7 @@ export default function PromptBox({ promptText }: PromptBoxProps) {
         </button>
       </div>
 
-      <div className={`mt-3 rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-xs text-gray-300 ${isExpanded ? '' : 'line-clamp-3'}`}>{promptText ?? '프롬프트'}</div>
+      <div className={`mt-3 whitespace-pre-wrap rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-xs text-gray-300 ${isExpanded ? '' : 'line-clamp-3'}`}>{promptText ?? '프롬프트'}</div>
 
       <button type="button" onClick={() => setIsExpanded((prev) => !prev)} className="mt-2 text-xs text-gray-400">
         {isExpanded ? '접기 ↑' : '더보기 ↓'}
