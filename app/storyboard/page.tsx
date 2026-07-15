@@ -5,7 +5,7 @@ import FormField from '@/app/components/FormField';
 import { storyboardFields } from '@/app/data/storyboardFields';
 import ImageGrid from '@/app/storyboard/image/imagegrid';
 import PromptBox from '@/app/storyboard/promptbox/propmptbox';
-import { createStoryboard, getGeneration } from '@/app/api/storyboard/api';
+import { createStoryboard, getGeneration, getIntegratedPrompt } from '@/app/api/storyboard/api';
 import { GenerationResult } from '@/types/api';
 
 // page.tsx
@@ -15,6 +15,8 @@ export default function Storyboard() {
 
   // 9컷 생성 결과 (완료되면 여기에 저장)
   const [generation, setGeneration] = useState<GenerationResult | null>(null);
+  // 통합 프롬프트 (별도 엔드포인트에서 조회해서 저장)
+  const [integratedPrompt, setIntegratedPrompt] = useState<string | null>(null);
   // 버튼 눌렀을 때 로딩 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,15 +29,17 @@ export default function Storyboard() {
   // generationId로 상태를 반복 조회하다가, 완료되면 결과를 저장
   // attempt는 몇 번째인지 세는 카운터
   const pollGeneration = async (generationId: number, attempt = 0): Promise<void> => {
-    // 무한 호출을 방지하기 위해 30번 넘게 안끝나면 에러 던짐
-    if (attempt > 30) {
+    // 무한 호출을 방지하기 위해 90번(약 3분) 넘게 안끝나면 에러 던짐
+    // (9컷 이미지 생성이 실제로는 수십 초~수 분 걸릴 수 있어서 기존 30번/60초보다 넉넉하게 잡음)
+    if (attempt > 90) {
       throw new Error('생성 시간이 너무 오래 걸립니다.');
     }
 
     const result = await getGeneration(generationId);
 
     // 서버가 준비되면 완성된 실제 데이터 전송
-    if (result.status === 'COMPLETED') {
+    // 백엔드가 상태값을 소문자('completed')로 내려주므로 대소문자 구분 없이 비교
+    if (result.status.toLowerCase() === 'completed') {
       setGeneration(result);
       return;
     }
@@ -58,8 +62,11 @@ export default function Storyboard() {
     setIsSubmitting(true);
     try {
       // 스토리보드 생성 요청 후 폴링 함수 시작
-      const { generationId } = await createStoryboard(formValues);
+      const { storyboardId, generationId } = await createStoryboard(formValues);
       await pollGeneration(generationId);
+      // 9컷 생성이 끝나면 통합 프롬프트를 별도로 조회
+      const promptResult = await getIntegratedPrompt(storyboardId);
+      setIntegratedPrompt(promptResult.integratedPrompt);
     } catch (error) {
       console.error(error);
       alert('스토리보드 생성에 실패했습니다.');
@@ -123,7 +130,7 @@ export default function Storyboard() {
 
           <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2">
             <ImageGrid cuts={generation?.cuts} />
-            <PromptBox promptText={generation?.integratedPrompt ?? undefined} />
+            <PromptBox promptText={integratedPrompt ?? undefined} />
           </div>
         </div>
       </div>

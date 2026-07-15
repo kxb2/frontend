@@ -1,7 +1,7 @@
 // 이미지 url 유무
 interface ImageCellProps {
   shotNumber: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
 }
 
 export default function ImageCell({ shotNumber, imageUrl }: ImageCellProps) {
