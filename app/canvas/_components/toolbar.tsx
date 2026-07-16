@@ -1,17 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef } from 'react';
 import MouseIcon from '@/app/canvas/_components/icons/mouse.svg';
 import HandIcon from '@/app/canvas/_components/icons/hand.svg';
-import DiagramIcon from '@/app/canvas/_components/icons/diagram.svg';
+import ImageIcon from '@/app/canvas/_components/icons/image.svg';
 import TextIcon from '@/app/canvas/_components/icons/text.svg';
 import CommentIcon from '@/app/canvas/_components/icons/comment.svg';
-import StickynoteIcon from '@/app/canvas/_components/icons/stickynote.svg';
 import ConnectorIcon from '@/app/canvas/_components/icons/connector.svg';
 import SectionIcon from '@/app/canvas/_components/icons/section.svg';
-import PlusIcon from '@/app/canvas/_components/icons/plus.svg';
 
-type Tool = 'mouse' | 'hand' | 'diagram' | 'text' | 'comment' | 'stickynote' | 'connector' | 'section';
+export type Tool = 'mouse' | 'hand' | 'image' | 'text' | 'comment' | 'connector' | 'section';
+
+export function isSelectTool(tool: Tool) {
+  return tool === 'mouse' || tool === 'section';
+}
+
+export function isItemListeningTool(tool: Tool) {
+  return isSelectTool(tool) || tool === 'connector' || tool === 'comment';
+}
 
 interface ToolButtonProps {
   selected?: boolean;
@@ -43,46 +49,55 @@ function Divider() {
   );
 }
 
-export default function Toolbar() {
-  const [tool, setTool] = useState<Tool>('mouse');
+interface ToolbarProps {
+  tool: Tool;
+  onToolChange: (tool: Tool) => void;
+  onFiles: (files: FileList) => void;
+}
+
+export default function Toolbar({ tool, onToolChange, onFiles }: ToolbarProps) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="fixed bottom-6 left-1/2 z-50 flex h-16 -translate-x-1/2 items-center gap-3 rounded-[19px] border border-white/25 bg-card p-3.25 backdrop-blur-[15px] drop-shadow-[0px_20px_25px_rgba(52,69,94,0.13)]">
-      <ToolButton label="선택" selected={tool === 'mouse'} onClick={() => setTool('mouse')}>
+      <ToolButton label="선택" selected={tool === 'mouse'} onClick={() => onToolChange('mouse')}>
         <MouseIcon className="size-6" />
       </ToolButton>
-      <ToolButton label="이동" selected={tool === 'hand'} onClick={() => setTool('hand')}>
+      <ToolButton label="이동" selected={tool === 'hand'} onClick={() => onToolChange('hand')}>
         <HandIcon className="size-6" />
       </ToolButton>
 
       <Divider />
 
-      <ToolButton label="다이어그램" selected={tool === 'diagram'} onClick={() => setTool('diagram')}>
-        <DiagramIcon className="size-6" />
+      <ToolButton label="이미지" onClick={() => imageInputRef.current?.click()}>
+        <ImageIcon className="size-6" />
+      </ToolButton>
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) onFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
+      <ToolButton label="텍스트" selected={tool === 'text'} onClick={() => onToolChange('text')}>
+        <TextIcon className="size-6" />
+      </ToolButton>
+      <ToolButton label="댓글" selected={tool === 'comment'} onClick={() => onToolChange('comment')}>
+        <CommentIcon className="size-6" />
       </ToolButton>
 
       <Divider />
 
-      <ToolButton label="텍스트" selected={tool === 'text'} onClick={() => setTool('text')}>
-        <TextIcon className="size-6" />
-      </ToolButton>
-      <ToolButton label="댓글" selected={tool === 'comment'} onClick={() => setTool('comment')}>
-        <CommentIcon className="size-6" />
-      </ToolButton>
-      <ToolButton label="스티키 노트" selected={tool === 'stickynote'} onClick={() => setTool('stickynote')}>
-        <StickynoteIcon className="size-6" />
-      </ToolButton>
-      <ToolButton label="커넥터" selected={tool === 'connector'} onClick={() => setTool('connector')}>
+      <ToolButton label="커넥터" selected={tool === 'connector'} onClick={() => onToolChange('connector')}>
         <ConnectorIcon className="size-6" />
       </ToolButton>
-      <ToolButton label="섹션" selected={tool === 'section'} onClick={() => setTool('section')}>
+      <ToolButton label="섹션" selected={tool === 'section'} onClick={() => onToolChange('section')}>
         <SectionIcon className="size-6" />
       </ToolButton>
-
-      <label className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-text-secondary text-border">
-        <PlusIcon className="size-4" />
-        <input type="file" accept="image/*,video/*" className="hidden" />
-      </label>
     </div>
   );
 }
