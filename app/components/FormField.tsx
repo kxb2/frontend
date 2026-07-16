@@ -103,7 +103,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
             {field.options.map((opt) => (
               <label key={opt.value} className="cursor-pointer">
                 <input type="radio" name={field.id} value={opt.value} className="peer sr-only" onChange={() => onFieldChange(field.id, opt.value)} />
-                <span className="inline-block rounded-full border border-neutral-700 px-4 py-1.5 text-sm text-gray-300 peer-checked:border-transparent peer-checked:bg-linear-to-r peer-checked:bg-purple-500 peer-checked:font-semibold peer-checked:text-white">{opt.label}</span>
+                <span className="inline-block rounded-full border border-neutral-700 px-4 py-1.5 text-sm text-gray-300 peer-checked:bg-[#1A1A24] peer-checked:border-[#C255FF] peer-checked:font-semibold peer-checked:text-white">{opt.label}</span>
               </label>
             ))}
 
