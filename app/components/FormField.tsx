@@ -70,6 +70,21 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
     addFiles(e.dataTransfer.files); // input 선택과 동일한 로직 재사용
   };
 
+  // 미리보기에서 특정 이미지를 삭제하는 함수
+  const removePreview = (index: number) => {
+    // 더 이상 안 쓰는 임시 URL은 해제해서 메모리 낭비 방지
+    URL.revokeObjectURL(previews[index].url);
+    // 배열에서 지우고 싶은 index 하나만 빼고 새 배열 생성
+    const next = previews.filter((_, i) => i !== index);
+    // 새 배열 갱신
+    setPreviews(next);
+    // 필드 값 변경을 알려줌
+    onFieldChange(
+      field.id,
+      next.map((p) => p.file)
+    );
+  };
+
   return (
     <div className="rounded-xl border border-neutral-700 bg-[#1A1A24] p-4">
       <div className="text-sm font-semibold text-gray-100">{field.label}</div>
@@ -226,8 +241,13 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
                   +
                 </button>
                 {previews.map((preview, i) => (
-                  <div key={preview.url} className="h-18 w-18 shrink-0 overflow-hidden rounded-md border border-neutral-700 bg-[#1C1F2A]">
+                  <div key={preview.url} className="group relative h-18 w-18 shrink-0 overflow-hidden rounded-md border border-neutral-700 bg-[#1C1F2A]">
                     <img src={preview.url} alt={`참고 이미지 ${i + 1}`} className="h-full w-full object-cover" />
+                    <button type="button" onClick={() => removePreview(i)} className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
               </div>
