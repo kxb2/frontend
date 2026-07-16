@@ -77,12 +77,12 @@ export default function Storyboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-950 text-gray-100">
+    <div className="flex flex-col h-screen bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl bg-neutral-900 p-5 text-white">
+        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl bg-surface p-5 text-text-primary">
           <div>
             <h2 className="text-base font-semibold">AI Storyboard</h2>
-            <p className="mt-1 text-xs text-gray-400">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
+            <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
           </div>
           <div className="flex flex-col gap-3">
             {storyboardFields.map((field) => (
@@ -90,7 +90,7 @@ export default function Storyboard() {
             ))}
           </div>
           {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
-          <button className="mt-4 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-3 text-sm font-semibold text-white disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
+          <button className="mt-4 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-3 text-sm font-semibold text-text-primary disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
             </svg>
@@ -100,7 +100,7 @@ export default function Storyboard() {
 
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-100">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
                 <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -108,18 +108,18 @@ export default function Storyboard() {
                 <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
               </svg>
               My Storyboard
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-text-secondary">
                 <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="flex gap-2">
-              <button className="flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1.5 text-xs text-gray-300">
+              <button className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M4 4h16v16H4z" stroke="currentColor" strokeWidth="1.5" />
                 </svg>
                 메모
               </button>
-              <button className="flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1.5 text-xs text-gray-300">
+              <button className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
