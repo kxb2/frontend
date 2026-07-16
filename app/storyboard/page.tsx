@@ -79,7 +79,7 @@ export default function Storyboard() {
   return (
     <div className="flex flex-col h-screen bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl bg-surface p-5 text-text-primary">
+        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl p-5 text-text-primary">
           <div>
             <h2 className="text-base font-semibold">AI Storyboard</h2>
             <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>

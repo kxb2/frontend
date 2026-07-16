@@ -17,7 +17,7 @@ export default function PromptBox({ promptText }: PromptBoxProps) {
   };
 
   return (
-    <div className="shrink-0 rounded-xl border border-border bg-surface p-4">
+    <div className="shrink-0 rounded-xl border border-border bg-[#1A1A24] p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
