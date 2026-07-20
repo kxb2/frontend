@@ -77,7 +77,7 @@ export default function Storyboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background text-text-primary">
+    <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
         <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl p-5 text-text-primary">
           <div>
@@ -108,27 +108,30 @@ export default function Storyboard() {
                 <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
               </svg>
               My Storyboard
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-text-secondary">
-                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
             </div>
             <div className="flex gap-2">
               <button className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 4h16v16H4z" stroke="currentColor" strokeWidth="1.5" />
+                <svg width="12" height="12" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M8.83333 0.500003H2.16667C1.72464 0.500003 1.30072 0.675597 0.988155 0.988158C0.675595 1.30072 0.5 1.72464 0.5 2.16667V15.5C0.5 15.942 0.675595 16.366 0.988155 16.6785C1.30072 16.9911 1.72464 17.1667 2.16667 17.1667H12.1667C12.6087 17.1667 13.0326 16.9911 13.3452 16.6785C13.6577 16.366 13.8333 15.942 13.8333 15.5V5.5M8.83333 0.500003C9.09713 0.499575 9.3584 0.551338 9.60211 0.65231C9.84582 0.753282 10.0671 0.901469 10.2533 1.08834L13.2433 4.07834C13.4307 4.26459 13.5793 4.48612 13.6806 4.73014C13.7818 4.97415 13.8338 5.23581 13.8333 5.5M8.83333 0.500003V4.66667C8.83333 4.88768 8.92113 5.09964 9.07741 5.25592C9.23369 5.4122 9.44565 5.5 9.66667 5.5L13.8333 5.5M5.5 6.33333H3.83333M10.5 9.66667H3.83333M10.5 13H3.83333"
+                    stroke="white"
+                  />
                 </svg>
                 메모
               </button>
               <button className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M8 9.66667V0.5M4.66667 3.83333L8 0.5L11.3333 3.83333M3.28667 0.5H2.16667C1.72464 0.5 1.30072 0.675595 0.988155 0.988156C0.675595 1.30072 0.5 1.72464 0.5 2.16667V13.8333C0.5 14.2754 0.675595 14.6993 0.988155 15.0118C1.30072 15.3244 1.72464 15.5 2.16667 15.5H13.8333C14.2754 15.5 14.6993 15.3244 15.0118 15.0118C15.3244 14.6993 15.5 14.2754 15.5 13.8333V2.16667C15.5 1.72464 15.3244 1.30072 15.0118 0.988156C14.6993 0.675595 14.2754 0.5 13.8333 0.5H12.7133"
+                    stroke="white"
+                  />
                 </svg>
                 내보내기
               </button>
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2">
+          <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2 overflow-y-auto pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
             <ImageGrid cuts={generation?.cuts} />
             <PromptBox promptText={integratedPrompt ?? undefined} />
           </div>

@@ -16,9 +16,9 @@ export default function ImageGrid({ cuts = [] }: ImageGridProps) {
   // cellIndexes 는 결과적으로 [0, 1, 2, 3, 4, 5, 6, 7, 8] 이런 배열이 됨
 
   return (
-    <div className="grid grid-cols-3 grid-rows-3 gap-3 flex-1 min-h-0">
+    <div className="grid grid-cols-3 grid-rows-3 gap-3 flex-1 min-h-175">
       {cellIndexes.map((cellIndex) => (
-        <ImageCell key={cellIndex} shotNumber={cellIndex + 1} imageUrl={cuts[cellIndex]?.imageUrl} />
+        <ImageCell key={cellIndex} shotNumber={cellIndex + 1} imageUrl={cuts[cellIndex]?.imageUrl} promptText={cuts[cellIndex]?.promptText} />
       ))}
     </div>
   );
