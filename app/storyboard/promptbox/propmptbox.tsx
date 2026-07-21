@@ -25,10 +25,10 @@ export default function PromptBox({ promptText }: PromptBoxProps) {
     <div className="shrink-0 rounded-xl border border-border bg-[#1A1A24] p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
           <div>
-            <div className="text-sm font-semibold text-text-primary">통합 프롬프트</div>
-            <div className="text-xs text-text-secondary">9컷에 동일하게 적용됩니다.</div>
+            <div className="text-sm font-semibold text-text-secondary">통합 프롬프트</div>
+            <div className="text-xs text-[#9A9A9A]">9컷에 동일하게 적용됩니다.</div>
           </div>
         </div>
         <button type="button" onClick={handleCopy} disabled={!promptText} className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary disabled:cursor-not-allowed disabled:opacity-40">
@@ -49,7 +49,7 @@ export default function PromptBox({ promptText }: PromptBoxProps) {
       </div>
 
       <div
-        className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-background p-3 text-xs text-text-secondary ${
+        className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${
           isExpanded ? 'max-h-48 overflow-y-auto scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent' : 'line-clamp-3'
         }`}
       >

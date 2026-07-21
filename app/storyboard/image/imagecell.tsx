@@ -16,9 +16,7 @@ export default function ImageCell({ shotNumber, imageUrl, promptText }: ImageCel
   return (
     <div className="relative w-full h-full">
       {/* 이미지 표시 영역: 여기에만 overflow-hidden을 둬서, 아래 프롬프트 팝업이 셀 밖으로 나가도 안 잘리게 함 */}
-      <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-br from-card to-background flex items-center justify-center">
-        {imageUrl ? <img src={imageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <span className="text-sm text-text-disabled">이미지 없음</span>}
-      </div>
+      <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20  flex items-center justify-center">{imageUrl ? <img src={imageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}</div>
 
       <span className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl bg-background text-[14px] font-semibold text-primary-variant">{String(shotNumber).padStart(2, '0')}</span>
 
