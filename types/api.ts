@@ -29,3 +29,19 @@ export interface IntegratedPromptResult {
   storyboardId: number; // 스토리보드 id
   integratedPrompt: string; // 9컷 프롬프트를 합친 통합 프롬프트
 }
+
+// 내보내기 요청 응답 형태 (POST /storyboards/{storyboardId}/exports/pdf, /exports/image)
+export interface ExportRequestResult {
+  exportId: number; // 내보내기 작업 id
+  status: string; // 상태
+}
+
+// 내보내기 상태 조회 응답 형태 (GET /exports/{exportId})
+export interface ExportStatusResult {
+  id: number; // 내보내기 작업 id
+  storyboardId: number; // 스토리보드 id
+  type: string; // 내보내기 종류 ('pdf' | 'image')
+  status: string; // 내보내기 진행 상태
+  downloadUrl: string | null; // 완료 시 다운로드 주소(진행 중이면 null)
+  errorMessage: string | null; // 실패 시 에러 메시지(성공이면 null)
+}

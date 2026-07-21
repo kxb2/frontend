@@ -1,5 +1,5 @@
 // 타입 가져오기
-import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult } from '@/types/api';
+import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult, ExportRequestResult, ExportStatusResult } from '@/types/api';
 
 // 실제 백엔드 서버 주소. .env.local의 NEXT_PUBLIC_API_URL을 읽고, 없으면 로컬 기본값 사용
 // (브라우저에서 실행되는 코드라 NEXT_PUBLIC_ 접두사가 붙은 환경변수만 접근 가능)
@@ -53,6 +53,46 @@ export async function getIntegratedPrompt(storyboardId: number): Promise<Integra
 
   if (!response.ok) {
     throw new Error('통합 프롬프트 조회에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// PDF 내보내기 요청 (POST {API_BASE_URL}/storyboards/{storyboardId}/exports/pdf)
+export async function exportPdf(storyboardId: number): Promise<ExportRequestResult> {
+  const response = await fetch(`${API_BASE_URL}/storyboards/${storyboardId}/exports/pdf`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error('PDF 내보내기 요청에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 이미지 내보내기 요청 (POST {API_BASE_URL}/storyboards/{storyboardId}/exports/image)
+// includeIndividualCuts: 9컷 그리드 1장 외에 컷별 개별 이미지도 zip에 포함할지 여부
+export async function exportImage(storyboardId: number, includeIndividualCuts = false): Promise<ExportRequestResult> {
+  const response = await fetch(`${API_BASE_URL}/storyboards/${storyboardId}/exports/image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ includeIndividualCuts }),
+  });
+
+  if (!response.ok) {
+    throw new Error('이미지 내보내기 요청에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 내보내기 상태 조회 (GET {API_BASE_URL}/exports/{exportId})
+export async function getExport(exportId: number): Promise<ExportStatusResult> {
+  const response = await fetch(`${API_BASE_URL}/exports/${exportId}`);
+
+  if (!response.ok) {
+    throw new Error('내보내기 상태 조회에 실패했습니다.');
   }
 
   return response.json();
