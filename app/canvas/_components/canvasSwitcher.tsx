@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import ChevronDownIcon from '@/app/canvas/_components/icons/chevron-down.svg';
+import ChevronDownIcon from '@/app/components/icons/chevron-down.svg';
 
 // 임시 캔버스 목록 데이터
 const CANVASES = [
@@ -53,7 +53,7 @@ export default function CanvasSwitcher() {
                   key={canvas.id}
                   type="button"
                   onClick={() => setSelectedId(canvas.id)}
-                  className={`group flex w-full cursor-pointer items-center gap-4.25 rounded-2xl p-3 text-left ${isSelected ? 'bg-[#393153]' : 'hover:bg-background/40'}`}
+                  className={`group flex w-full cursor-pointer items-center gap-4.25 rounded-2xl p-3 text-left ${isSelected ? 'bg-card-secondary' : 'hover:bg-background/40'}`}
                 >
                   <div className={`h-8.25 w-19 shrink-0 rounded-xl border bg-background ${isSelected ? 'border-primary' : 'border-border'}`} />
                   <div className="flex flex-col items-start gap-px">
