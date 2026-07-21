@@ -3,12 +3,15 @@
 /* 컬러 토큰 */
 @theme {
   --color-primary: #c255ff;
-  --color-primary-variant: #e36eff;
+  --color-primary-variant: #e36ded;
   --color-secondary: #eafb2f;
   --color-secondary-variant: #c8f000;
   --color-background: #111119;
   --color-surface: #1c1f2a;
+  --color-surface-secondary: #262c3b;
   --color-card: #262c3b;
+  --color-card-secondary: #393153;
+  --color-card-tertiary: #1a1a24;
   --color-border: #394257;
   --color-border-divider: #525252;
   --color-text-primary: #ffffff;
