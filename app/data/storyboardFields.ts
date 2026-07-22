@@ -31,4 +31,15 @@ export const storyboardFields: StoryBoardField[] = [
     accept: 'image/*',
     maxFiles: 10,
   },
+  {
+    id: 'imageModel',
+    type: 'modelSelect',
+    label: '4. 이미지 생성 모델',
+    description: '스토리보드 이미지를 생성할 모델을 선택해주세요.',
+    options: [
+      { label: 'ChatGPT Images 2.0', value: 'chatgpt', description: 'OpenAI 최신 이미지 생성 모델' },
+      { label: 'Nano Banana 2', value: 'nano-banana-2', description: 'Gemini 3.1 최신 이미지 생성 모델' },
+    ],
+    defaultValue: 'chatgpt',
+  },
 ];
