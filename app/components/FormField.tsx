@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StoryBoardField } from '@/types/input';
 
 interface Props {
@@ -21,17 +21,30 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   // 화면에 보이지 않지만 DOM 요소를 직접 조작하기 위함
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 고급설정 펼침 여부
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  // 고급설정 값들
-  const [style, setStyle] = useState('');
-  const [tone, setTone] = useState('');
-  const [aspectRatio, setAspectRatio] = useState('');
-  const [era, setEra] = useState('');
+  // // 고급설정 펼침 여부
+  // const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  // // 고급설정 값들
+  // const [style, setStyle] = useState('');
+  // const [tone, setTone] = useState('');
+  // const [aspectRatio, setAspectRatio] = useState('');
+  // const [era, setEra] = useState('');
 
   // 최대 업로드 가능 장수, 꽉 찼는지 여부
   const maxFiles = field.type === 'fileUpload' ? (field.maxFiles ?? 10) : 10;
   const isFull = previews.length >= maxFiles;
+
+  // 이미지 생성 모델 선택 값(기본값은 field.defaultValue)
+  // ?? 연산자 사용 방식 = 왼쪽부터 값이 있으면 그걸 쓰고, 없으면(null/undefined) 다음 걸로 넘어간다
+  // ex) field.defaultValue가 없다 -> field.options[0]?.value로 넘어가서 있는지 체크 후 없다 -> 빈 문자열 제공
+  const [selectedModel, setSelectedModel] = useState(field.type === 'modelSelect' ? (field.defaultValue ?? field.options[0]?.value ?? '') : '');
+
+  // 마운트 시 기본 선택값을 부모(formValues)에도 반영
+  useEffect(() => {
+    if (field.type === 'modelSelect' && selectedModel) {
+      onFieldChange(field.id, selectedModel);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 파일 목록을 받아 미리보기에 추가하는 공용 함수(input 선택 / 드래그앤드롭 공용)
   const addFiles = (fileList: FileList) => {
@@ -86,16 +99,16 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-neutral-700 bg-[#1A1A24] p-4">
+    <div className="rounded-xl border border-neutral-700 bg-[#1A1A24] p-3">
       <div className="text-sm font-semibold text-gray-100">{field.label}</div>
       <div className="mt-1 text-xs text-gray-400">{field.description}</div>
 
-      <div className="mt-3">
+      <div className="mt-2">
         {/* 타입이 시나리오인 경우 */}
         {field.type === 'textarea' && (
           <div className="relative">
             <textarea
-              className="h-24 w-full resize-none rounded-lg border border-neutral-700 bg-[#1C1F2A] p-2 text-sm text-gray-100 placeholder:text-gray-500"
+              className="h-16 w-full resize-none rounded-lg border border-neutral-700 bg-[#1C1F2A] p-2 text-sm text-gray-100 placeholder:text-gray-500 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent"
               placeholder={field.placeholder}
               maxLength={field.maxLength}
               value={text}
@@ -118,7 +131,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
             {field.options.map((opt) => (
               <label key={opt.value} className="cursor-pointer">
                 <input type="radio" name={field.id} value={opt.value} className="peer sr-only" onChange={() => onFieldChange(field.id, opt.value)} />
-                <span className="inline-block rounded-full border border-neutral-700 px-4 py-1.5 text-sm text-gray-300 peer-checked:bg-[#1A1A24] peer-checked:border-[#C255FF] peer-checked:font-semibold peer-checked:text-white">{opt.label}</span>
+                <span className="inline-block rounded-full border border-neutral-700 px-4 py-1 text-sm text-gray-300 peer-checked:bg-[#1A1A24] peer-checked:border-[#C255FF] peer-checked:font-semibold peer-checked:text-white">{opt.label}</span>
               </label>
             ))}
 
@@ -255,6 +268,35 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
 
             <input ref={fileInputRef} type="file" accept={field.accept} multiple={(field.maxFiles ?? 1) > 1} onChange={handleFileChange} className="hidden" />
             <p className="mt-2 text-[11px] text-gray-500">이미지가 없어도 생성할 수 있어요! 텍스트만으로도 원하는 결과물을 만들어 드려요.</p>
+          </div>
+        )}
+
+        {/* 타입이 이미지 생성 모델 선택인 경우 */}
+        {field.type === 'modelSelect' && (
+          <div className="grid grid-cols-2 gap-2">
+            {field.options.map((opt) => {
+              const isSelected = selectedModel === opt.value;
+              return (
+                <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
+                  <input
+                    type="radio"
+                    name={field.id}
+                    value={opt.value}
+                    checked={isSelected}
+                    onChange={() => {
+                      setSelectedModel(opt.value);
+                      onFieldChange(field.id, opt.value);
+                    }}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
+                    <span className="text-sm font-medium text-gray-100">{opt.label}</span>
+                  </div>
+                  {opt.description && <span className="pl-6 text-xs text-gray-500">{opt.description}</span>}
+                </label>
+              );
+            })}
           </div>
         )}
       </div>

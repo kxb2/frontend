@@ -1,5 +1,5 @@
 // input 타입 정의
-type FieldType = 'textarea' | 'select' | 'fileUpload';
+type FieldType = 'textarea' | 'select' | 'fileUpload' | 'modelSelect';
 
 interface BaseField {
   id: string; // 고유 id
@@ -36,4 +36,17 @@ interface FileUploadField extends BaseField {
   maxSizeMB?: number; // 업로드 용량 제한용
 }
 
-export type StoryBoardField = TextAreaField | SelectField | FileUploadField;
+// 이미지 생성 모델 선택 필드
+interface ModelSelectOption {
+  label: string;
+  value: string;
+  description?: string; // 옵션 아래에 표시할 설명
+}
+
+interface ModelSelectField extends BaseField {
+  type: 'modelSelect';
+  options: ModelSelectOption[];
+  defaultValue?: string; // 기본으로 선택되어 있을 옵션의 value
+}
+
+export type StoryBoardField = TextAreaField | SelectField | FileUploadField | ModelSelectField;

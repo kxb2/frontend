@@ -150,18 +150,18 @@ export default function Storyboard() {
   return (
     <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl p-5 text-text-primary">
+        <div className="w-96 shrink-0 flex flex-col gap-2 overflow-y-auto rounded-2xl p-2 text-text-primary">
           <div>
             <h2 className="text-base font-semibold">AI Storyboard</h2>
             <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {storyboardFields.map((field) => (
               <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
             ))}
           </div>
           {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
-          <button className="mt-4 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-3 text-sm font-semibold text-text-primary disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
+          <button className="mt-1 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
             </svg>
