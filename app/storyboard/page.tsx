@@ -205,7 +205,7 @@ export default function Storyboard() {
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2 overflow-y-auto pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
-            <ImageGrid cuts={generation?.cuts} />
+            <ImageGrid cuts={generation?.cuts} storyboardId={storyboardId} />
             <PromptBox promptText={integratedPrompt ?? undefined} />
           </div>
         </div>

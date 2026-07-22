@@ -1,28 +1,71 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { regenerateCut, getRegeneration } from '@/app/api/storyboard/api';
+import { ImageCellProps } from '@/types/storyboard';
 
-// 이미지 url 유무
-interface ImageCellProps {
-  shotNumber: number;
-  imageUrl?: string | null;
-  promptText?: string | null;
-}
-
-export default function ImageCell({ shotNumber, imageUrl, promptText }: ImageCellProps) {
+export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, promptText }: ImageCellProps) {
   // 이 컷의 프롬프트 팝업을 띄울지 여부
   const [showPrompt, setShowPrompt] = useState(false);
+  // 실제로 화면에 보여줄 이미지 주소(재생성 성공 시 이 값만 갱신함)
+  const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl ?? null);
+  // 재생성 진행 중 여부
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // 부모가 새로운 generation 결과를 내려주면(예: 재검색) 화면도 그 값으로 맞춤
+  useEffect(() => {
+    setCurrentImageUrl(imageUrl ?? null);
+  }, [imageUrl]);
+
+  // regenerationId로 상태를 반복 조회하다가, 완료되면 새 이미지 주소를 반환(내보내기 폴링과 동일한 패턴)
+  const pollRegeneration = async (regenerationId: number, attempt = 0): Promise<string | null> => {
+    if (attempt > 30) {
+      throw new Error('재생성 시간이 너무 오래 걸립니다.');
+    }
+
+    const result = await getRegeneration(regenerationId);
+    const status = result.status.toLowerCase();
+
+    if (status === 'completed') {
+      return result.imageUrl;
+    }
+    if (status === 'failed') {
+      throw new Error(result.errorMessage ?? '컷 재생성에 실패했습니다.');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return pollRegeneration(regenerationId, attempt + 1);
+  };
+
+  // 재생성 버튼 클릭 시 실행
+  const handleRegenerate = async () => {
+    if (!storyboardId || !cutId) return;
+
+    setIsRegenerating(true);
+    try {
+      const { regenerationId } = await regenerateCut(storyboardId, cutId);
+      const newImageUrl = await pollRegeneration(regenerationId);
+      if (newImageUrl) {
+        setCurrentImageUrl(newImageUrl);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('컷 재생성에 실패했습니다.');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
 
   return (
     <div className="relative w-full h-full">
       {/* 이미지 표시 영역: 여기에만 overflow-hidden을 둬서, 아래 프롬프트 팝업이 셀 밖으로 나가도 안 잘리게 함 */}
-      <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20  flex items-center justify-center">{imageUrl ? <img src={imageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}</div>
+      <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20  flex items-center justify-center">{currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}</div>
 
       <span className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl bg-background text-[14px] font-semibold text-primary-variant">{String(shotNumber).padStart(2, '0')}</span>
 
-      {/* 컷별 재생성 버튼(추후 기능 붙일 예정, 지금은 클릭 핸들러 없음) */}
-      <button type="button" disabled={!promptText} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-text-primary disabled:cursor-not-allowed disabled:opacity-40">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* 컷별 재생성 버튼 */}
+      <button type="button" onClick={handleRegenerate} disabled={!promptText || !storyboardId || !cutId || isRegenerating} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-text-primary disabled:cursor-not-allowed disabled:opacity-40">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={isRegenerating ? 'animate-spin' : ''}>
           <path d="M4 4v5h5M20 20v-5h-5M4.5 9a8 8 0 0 1 14-4.5M19.5 15a8 8 0 0 1-14 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>

@@ -45,3 +45,18 @@ export interface ExportStatusResult {
   downloadUrl: string | null; // 완료 시 다운로드 주소(진행 중이면 null)
   errorMessage: string | null; // 실패 시 에러 메시지(성공이면 null)
 }
+
+// 컷 재생성 요청 응답 형태 (POST /storyboards/{storyboardId}/cuts/{cutId}/regeneration)
+export interface RegenerationRequestResult {
+  regenerationId: number; // 재생성 작업 id
+  status: string; // 상태
+}
+
+// 컷 재생성 상태 조회 응답 형태 (GET /regenerations/{regenerationId})
+export interface RegenerationStatusResult {
+  id: number; // 재생성 작업 id
+  cutId: number; // 대상 컷 id
+  status: string; // 재생성 진행 상태
+  imageUrl: string | null; // 완료 시 새 이미지 주소(진행 중이면 null)
+  errorMessage: string | null; // 실패 시 에러 메시지(성공이면 null)
+}

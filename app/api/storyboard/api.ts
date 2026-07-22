@@ -1,5 +1,5 @@
 // 타입 가져오기
-import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult, ExportRequestResult, ExportStatusResult } from '@/types/api';
+import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult, ExportRequestResult, ExportStatusResult, RegenerationRequestResult, RegenerationStatusResult } from '@/types/api';
 
 // 실제 백엔드 서버 주소. .env.local의 NEXT_PUBLIC_API_URL을 읽고, 없으면 로컬 기본값 사용
 // (브라우저에서 실행되는 코드라 NEXT_PUBLIC_ 접두사가 붙은 환경변수만 접근 가능)
@@ -93,6 +93,30 @@ export async function getExport(exportId: number): Promise<ExportStatusResult> {
 
   if (!response.ok) {
     throw new Error('내보내기 상태 조회에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 특정 컷 재생성 요청 (POST {API_BASE_URL}/storyboards/{storyboardId}/cuts/{cutId}/regeneration)
+export async function regenerateCut(storyboardId: number, cutId: number): Promise<RegenerationRequestResult> {
+  const response = await fetch(`${API_BASE_URL}/storyboards/${storyboardId}/cuts/${cutId}/regeneration`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error('컷 재생성 요청에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 컷 재생성 상태 조회 (GET {API_BASE_URL}/regenerations/{regenerationId})
+export async function getRegeneration(regenerationId: number): Promise<RegenerationStatusResult> {
+  const response = await fetch(`${API_BASE_URL}/regenerations/${regenerationId}`);
+
+  if (!response.ok) {
+    throw new Error('컷 재생성 상태 조회에 실패했습니다.');
   }
 
   return response.json();

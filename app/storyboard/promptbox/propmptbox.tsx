@@ -1,10 +1,7 @@
 'use client';
 
+import { PromptBoxProps } from '@/types/storyboard';
 import { useState } from 'react';
-
-interface PromptBoxProps {
-  promptText?: string;
-}
 
 export default function PromptBox({ promptText }: PromptBoxProps) {
   // "더보기" 펼침 여부
