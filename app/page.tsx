@@ -1,3 +1,5 @@
-export default function Home() {
-  return <h1>kxb2_frontend</h1>;
+import { redirect } from 'next/navigation';
+
+export default function Main() {
+  redirect('/storyboard');
 }
