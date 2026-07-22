@@ -3,6 +3,7 @@ import type Konva from 'konva';
 import type { CanvasItem, Connector } from '@/types/canvas';
 import { trackWindowGesture } from '@/app/canvas/_components/canvasUtils';
 import type { Tool } from '@/app/canvas/_components/toolbar';
+import { getConnectorAnchors, getConnectorCurvePoints, getNodeAnchorTowardPoint, type ConnectorAnchor } from '@/app/canvas/_components/tools/connector/connectorCurve';
 
 interface UseConnectorParams {
   tool: Tool;
@@ -28,13 +29,22 @@ export function useConnector({
   onReconnectConnector,
   clearItemSelection,
 }: UseConnectorParams) {
-  const lineRefs = useRef(new Map<string, Konva.Arrow>());
-  const previewLineRef = useRef<Konva.Arrow>(null);
+  const lineRefs = useRef(new Map<string, Konva.Line>());
+  const dotRefs = useRef(new Map<string, { from: Konva.Circle | null; to: Konva.Circle | null }>());
+  const previewLineRef = useRef<Konva.Line>(null);
   const [selectedConnectorId, setSelectedConnectorId] = useState<string | null>(null);
 
-  function registerLine(id: string, line: Konva.Arrow | null) {
+  function registerLine(id: string, line: Konva.Line | null) {
     if (line) lineRefs.current.set(id, line);
     else lineRefs.current.delete(id);
+  }
+
+  // 커넥터 양 끝
+  function registerDot(id: string, end: 'from' | 'to', node: Konva.Circle | null) {
+    const entry = dotRefs.current.get(id) ?? { from: null, to: null };
+    entry[end] = node;
+    if (entry.from || entry.to) dotRefs.current.set(id, entry);
+    else dotRefs.current.delete(id);
   }
 
   // 커넥터를 그릴 때 마우스가 올라간 노드의 id를 찾음
@@ -53,7 +63,11 @@ export function useConnector({
       const fromNode = nodeMapRef.current.get(connector.fromId);
       const toNode = nodeMapRef.current.get(connector.toId);
       if (!line || !fromNode || !toNode) continue;
-      line.points([fromNode.x(), fromNode.y(), toNode.x(), toNode.y()]);
+      const { from, to } = getConnectorAnchors(fromNode, toNode);
+      line.points(getConnectorCurvePoints(from, to));
+      const dots = dotRefs.current.get(connector.id);
+      dots?.from?.position(from);
+      dots?.to?.position(to);
       layer = line.getLayer();
     }
     layer?.batchDraw();
@@ -97,12 +111,13 @@ export function useConnector({
     const fixedId = end === 'from' ? connector.toId : connector.fromId;
     const fixedNode = nodeMapRef.current.get(fixedId);
     if (!fixedNode) return;
-    const fixed = { x: fixedNode.x(), y: fixedNode.y() };
 
     trackWindowGesture(
       (moveEvent) => {
         const cur = screenToLogical(moveEvent.clientX, moveEvent.clientY);
-        const points = end === 'from' ? [cur.x, cur.y, fixed.x, fixed.y] : [fixed.x, fixed.y, cur.x, cur.y];
+        const fixed = getNodeAnchorTowardPoint(fixedNode, cur.x, cur.y);
+        const free: ConnectorAnchor = { x: cur.x, y: cur.y, horizontalTangent: !fixed.horizontalTangent };
+        const points = end === 'from' ? getConnectorCurvePoints(free, fixed) : getConnectorCurvePoints(fixed, free);
         line.points(points);
         line.getLayer()?.batchDraw();
       },
@@ -125,15 +140,17 @@ export function useConnector({
     const preview = previewLineRef.current;
     if (!stage || !fromNode || !preview) return;
 
-    const start = { x: fromNode.x(), y: fromNode.y() };
-    preview.points([start.x, start.y, start.x, start.y]);
+    const initialCur = screenToLogical(e.evt.clientX, e.evt.clientY);
+    const initialStart = getNodeAnchorTowardPoint(fromNode, initialCur.x, initialCur.y);
+    preview.points(getConnectorCurvePoints(initialStart, { x: initialCur.x, y: initialCur.y, horizontalTangent: !initialStart.horizontalTangent }));
     preview.visible(true);
     preview.getLayer()?.batchDraw();
 
     trackWindowGesture(
       (moveEvent) => {
         const cur = screenToLogical(moveEvent.clientX, moveEvent.clientY);
-        preview.points([start.x, start.y, cur.x, cur.y]);
+        const start = getNodeAnchorTowardPoint(fromNode, cur.x, cur.y);
+        preview.points(getConnectorCurvePoints(start, { x: cur.x, y: cur.y, horizontalTangent: !start.horizontalTangent }));
         preview.getLayer()?.batchDraw();
       },
       (upEvent) => {
@@ -151,6 +168,7 @@ export function useConnector({
     previewLineRef,
     selectedConnectorId,
     registerLine,
+    registerDot,
     syncConnectors,
     handleConnectorMouseDown,
     handleConnectorClick,
