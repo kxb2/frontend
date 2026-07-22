@@ -150,7 +150,7 @@ export default function Storyboard() {
   return (
     <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="w-96 shrink-0 flex flex-col gap-2 overflow-y-auto rounded-2xl p-2 text-text-primary">
+        <div className="w-120 shrink-0 flex flex-col gap-2 overflow-y-auto rounded-2xl p-4 text-text-primary">
           <div>
             <h2 className="text-base font-semibold">AI Storyboard</h2>
             <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
@@ -170,7 +170,7 @@ export default function Storyboard() {
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex items-center justify-between shrink-0">
+          <div className="flex items-center justify-between shrink-0 pr-2">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />

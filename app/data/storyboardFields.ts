@@ -8,7 +8,7 @@ export const storyboardFields: StoryBoardField[] = [
     label: '1. 시나리오 입력',
     description: '영상이나 이미지로 만들고 싶은 이야기를 자유롭게 입력해주세요.',
     placeholder: '시나리오를 입력해주세요.',
-    maxLength: 500,
+    maxLength: 1000,
   },
   {
     id: 'genre',
