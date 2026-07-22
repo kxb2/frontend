@@ -2,6 +2,7 @@ import { Fragment, type RefObject } from 'react';
 import type Konva from 'konva';
 import { Circle } from 'react-konva';
 import type { Connector } from '@/types/canvas';
+import { getConnectorAnchors } from '@/app/canvas/_components/tools/connector/connectorCurve';
 
 interface ReconnectHandlesProps {
   connectors: Connector[];
@@ -20,11 +21,12 @@ export default function ReconnectHandles({ connectors, selectedConnectorId, node
   // eslint-disable-next-line react-hooks/refs
   const toNode = nodeMapRef.current.get(selectedConnector.toId);
   if (!fromNode || !toNode) return null;
+  const { from, to } = getConnectorAnchors(fromNode, toNode);
   return (
     <Fragment>
       <Circle
-        x={fromNode.x()}
-        y={fromNode.y()}
+        x={from.x}
+        y={from.y}
         radius={7}
         scaleX={1 / scale}
         scaleY={1 / scale}
@@ -34,8 +36,8 @@ export default function ReconnectHandles({ connectors, selectedConnectorId, node
         onMouseDown={(e) => onReconnectHandleDown(e, selectedConnector.id, 'from')}
       />
       <Circle
-        x={toNode.x()}
-        y={toNode.y()}
+        x={to.x}
+        y={to.y}
         radius={7}
         scaleX={1 / scale}
         scaleY={1 / scale}

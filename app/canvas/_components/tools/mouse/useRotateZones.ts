@@ -1,12 +1,11 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type Konva from 'konva';
-import type { CanvasItem } from '@/types/canvas';
 import { rotateAround, trackWindowGesture } from '@/app/canvas/_components/canvasUtils';
 import { isSelectTool, type Tool } from '@/app/canvas/_components/toolbar';
 
 export const CORNER_ANCHORS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
 export type CornerAnchor = (typeof CORNER_ANCHORS)[number];
-const CORNER_LOCAL_OFFSETS: Record<CornerAnchor, (w: number, h: number) => { x: number; y: number }> = {
+export const CORNER_LOCAL_OFFSETS: Record<CornerAnchor, (w: number, h: number) => { x: number; y: number }> = {
   'top-left': () => ({ x: 0, y: 0 }),
   'top-right': (w) => ({ x: w, y: 0 }),
   'bottom-left': (_w, h) => ({ x: 0, y: h }),
@@ -25,7 +24,6 @@ export const ROTATE_CURSOR =
 
 interface UseRotateZonesParams {
   tool: Tool;
-  items: CanvasItem[];
   selectedIds: Set<string>;
   transformerRef: RefObject<Konva.Transformer | null>;
   nodeMapRef: RefObject<Map<string, Konva.Group>>;
@@ -33,14 +31,13 @@ interface UseRotateZonesParams {
   stagePos: { x: number; y: number };
   screenToLogical: (clientX: number, clientY: number) => { x: number; y: number };
   syncConnectors: () => void;
-  syncDependentComments: (targetId: string) => void;
+  syncResizeAnchors?: () => void; // 메모의 컨트롤(useMemoResizeAnchors)도 매 프레임 명시적으로 동기화
   onRotateEnd: () => void;
 }
 
 // 꼭짓점 4개에 회전 가능 영역을 별도로 마련하고, 기본 앵커는 크기 변경만 가능하게 함
 export function useRotateZones({
   tool,
-  items,
   selectedIds,
   transformerRef,
   nodeMapRef,
@@ -48,7 +45,7 @@ export function useRotateZones({
   stagePos,
   screenToLogical,
   syncConnectors,
-  syncDependentComments,
+  syncResizeAnchors,
   onRotateEnd,
 }: UseRotateZonesParams) {
   const rotateZoneRefs = useRef<Partial<Record<CornerAnchor, Konva.Rect>>>({});
@@ -105,10 +102,7 @@ export function useRotateZones({
     const rot = transformer.rotation();
     const center = rotateAround(x + w / 2, y + h / 2, x, y, rot);
 
-    // 댓글은 대상이 이동할 때마다 위치를 실시간으로 업데이트해야 하므로 회전 시에도 댓글을 같이 옮김
-    const commentIds = new Set(items.filter((it) => it.type === 'comment').map((it) => it.id));
     const nodes = Array.from(selectedIds)
-      .filter((id) => !commentIds.has(id))
       .map((id) => nodeMapRef.current.get(id))
       .filter((node): node is Konva.Group => !!node);
     if (nodes.length === 0) return;
@@ -128,11 +122,11 @@ export function useRotateZones({
           const rotated = rotateAround(start.x, start.y, center.x, center.y, deltaDeg);
           node.position(rotated);
           node.rotation(start.rotation + deltaDeg);
-          syncDependentComments(start.id);
         });
         transformer.forceUpdate();
         syncConnectors();
         syncRotateZones();
+        syncResizeAnchors?.();
       },
       () => {
         onRotateEnd();

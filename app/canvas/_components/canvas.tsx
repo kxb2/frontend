@@ -1,45 +1,61 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import type Konva from 'konva';
 import { Layer, Stage } from 'react-konva';
 import type { CanvasItem, CanvasProps } from '@/types/canvas';
-import CanvasKonvaItem from '@/app/canvas/_components/canvasItem';
-import CanvasSwitcher from '@/app/canvas/_components/canvasSwitcher';
+import CanvasKonvaItem from '@/app/canvas/_components/items/CanvasItem';
+import { computeMemoScalePatch } from '@/app/canvas/_components/tools/memo/memoLayout';
 import ConnectorLines from '@/app/canvas/_components/tools/connector/ConnectorLines';
 import ReconnectHandles from '@/app/canvas/_components/tools/connector/ReconnectHandles';
 import SelectionOverlay from '@/app/canvas/_components/tools/mouse/SelectionOverlay';
-import TextEditOverlay from '@/app/canvas/_components/tools/text/TextEditOverlay';
-import { useTextEditing } from '@/app/canvas/_components/tools/text/useTextEditing';
-import { useCommentPins } from '@/app/canvas/_components/tools/comment/useCommentPins';
+import MemoEditOverlay from '@/app/canvas/_components/tools/memo/MemoEditOverlay';
+import MemoColorPicker from '@/app/canvas/_components/tools/memo/MemoColorPicker';
+import { useMemoEditing } from '@/app/canvas/_components/tools/memo/useMemoEditing';
+import { useMemoColorPicker } from '@/app/canvas/_components/tools/memo/useMemoColorPicker';
+import { useMemoResize } from '@/app/canvas/_components/tools/memo/useMemoResize';
+import { useMemoResizeAnchors } from '@/app/canvas/_components/tools/memo/useMemoResizeAnchors';
 import { useConnector } from '@/app/canvas/_components/tools/connector/useConnector';
 import { useSelection } from '@/app/canvas/_components/tools/mouse/useSelection';
 import { useRotateZones } from '@/app/canvas/_components/tools/mouse/useRotateZones';
 import { useStagePanZoom } from '@/app/canvas/_components/useStagePanZoom';
 import { isSelectTool } from '@/app/canvas/_components/toolbar';
 
-export default function Canvas({
-  tool,
-  items,
-  connectors,
-  onDropFiles,
-  onUpdateItems,
-  onBringToFront,
-  onDeleteItems,
-  onAddConnector,
-  onDeleteConnector,
-  onReconnectConnector,
-  onAddTextItem,
-  onAddCommentItem,
-  onSetGroup,
-  onEditItemText,
-  onToolChange,
-}: CanvasProps) {
+export interface CanvasHandle {
+  getThumbnail: () => string | undefined;
+}
+
+const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
+  {
+    tool,
+    items,
+    connectors,
+    onDropFiles,
+    onUpdateItems,
+    onBringToFront,
+    onDeleteItems,
+    onAddConnector,
+    onDeleteConnector,
+    onReconnectConnector,
+    onAddMemoItem,
+    onSetGroup,
+    onEditItemText,
+    onSetMemoColor,
+    onSetMemoViewMode,
+    onToolChange,
+  }: CanvasProps,
+  ref,
+) {
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const nodeMapRef = useRef(new Map<string, Konva.Group>());
+
+  // 캔버스 전환 드롭다운의 썸네일 캡처용
+  useImperativeHandle(ref, () => ({
+    getThumbnail: () => stageRef.current?.toDataURL({ pixelRatio: 0.2 }),
+  }));
   const clearConnectorSelectionRef = useRef<() => void>(() => {}); // useSelection이 useConnector보다 먼저 만들어져 직접 참조를 주고받을 수 없으므로 ref로 우회
   const commitScheduledRef = useRef(false);
 
@@ -59,6 +75,7 @@ export default function Canvas({
     previewLineRef,
     selectedConnectorId,
     registerLine,
+    registerDot,
     syncConnectors,
     handleConnectorMouseDown,
     handleConnectorClick,
@@ -80,36 +97,67 @@ export default function Canvas({
     clearConnectorSelectionRef.current = clearConnectorSelection;
   }, [clearConnectorSelection]);
 
-  const { editingItemId, overlayRect, registerEditableNode, startEditing, handlePlacementClick, handleFinishEditing } = useTextEditing({
+  const { editingItemId, overlayRect, draftText, registerEditableNode, startEditing, handlePlacementClick, handleFinishEditing, handleDraftChange } = useMemoEditing({
     items,
     scale,
     stagePos,
     stageRef,
     screenToLogical,
-    onAddTextItem,
+    onAddMemoItem,
     onEditItemText,
     onToolChange,
     onFinishSelect: selectOnly,
   });
 
-  const { resolveItemForRender, syncDependentComments, handleCommentTargetClick } = useCommentPins({
-    tool,
-    items,
+  const { openMemoId, rect: colorPickerRect, registerMenuNode, toggleColorPicker, closeColorPicker } = useMemoColorPicker({ items, scale, stagePos });
+
+  const { liveResize, startResize } = useMemoResize({ screenToLogical, onUpdateItems });
+
+  // id로 아이템을 반복 조회할 때 items.find 대신 쓰는 캐시
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
+
+  // 메모 단독 선택 시 자체 컨트롤만 사용
+  const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : undefined;
+  const singleSelectedItem = singleSelectedId !== undefined ? itemsById.get(singleSelectedId) : undefined;
+  const selectedMemoItem = isSelectTool(tool) && singleSelectedItem?.type === 'memo' ? singleSelectedItem : undefined;
+  const isSingleMemoSelected = !!selectedMemoItem;
+  const { registerResizeAnchor, registerBorderNode, syncResizeAnchors, handleAnchorMouseDown, cornerConfig: memoCornerConfig } = useMemoResizeAnchors({
+    memoItem: selectedMemoItem,
+    isEditing: !!selectedMemoItem && editingItemId === selectedMemoItem.id,
     nodeMapRef,
-    onAddCommentItem,
-    onToolChange,
-    startEditing,
+    onResizeStart: startResize,
   });
+
+  function handleToggleColorPicker(item: CanvasItem) {
+    if (!isSelectTool(tool)) return;
+    toggleColorPicker(item);
+  }
+
+  // 전체 보기/접힘
+  function handleCycleViewMode(item: CanvasItem) {
+    if (item.type !== 'memo') return;
+    onSetMemoViewMode(item.id);
+  }
 
   // 선택된 노드들의 드래그/회전/스케일 결과를 하나의 onUpdateItems 호출로 묶어 커밋
   function commitSelectedNodes() {
     const patches = Array.from(selectedIds)
       .map((id) => {
-        const item = items.find((i) => i.id === id);
-        if (item?.type === 'comment') return null;
         const node = nodeMapRef.current.get(id);
         if (!node) return null;
-        return { id, x: node.x() - node.offsetX(), y: node.y() - node.offsetY(), rotate: node.rotation(), scale: node.scaleX() };
+        const x = node.x() - node.offsetX();
+        const y = node.y() - node.offsetY();
+        const rotate = node.rotation();
+        const sx = node.scaleX();
+        const sy = node.scaleY();
+
+        // 메모는 item.scale로 통째로 안 늘리고 sx/sy를 width/height에 직접 곱함
+        const item = itemsById.get(id);
+        if (item?.type === 'memo') {
+          const { width, height } = computeMemoScalePatch(item, sx, sy);
+          return { id, x, y, rotate, scale: item.scale, width, height };
+        }
+        return { id, x, y, rotate, scale: sx };
       })
       .filter((patch): patch is Exclude<typeof patch, null> => !!patch);
     if (patches.length > 0) onUpdateItems(patches);
@@ -127,7 +175,6 @@ export default function Canvas({
 
   const { registerRotateZone, syncRotateZones, handleRotateZonePointerDown } = useRotateZones({
     tool,
-    items,
     selectedIds,
     transformerRef,
     nodeMapRef,
@@ -135,9 +182,20 @@ export default function Canvas({
     stagePos,
     screenToLogical,
     syncConnectors,
-    syncDependentComments,
+    syncResizeAnchors,
     onRotateEnd: commitSelectedNodes,
   });
+
+  // 테두리/컨트롤 실시간 동기화
+  useLayoutEffect(() => {
+    if (!liveResize) return;
+    const transformer = transformerRef.current;
+    if (transformer) transformer.nodes(transformer.nodes()); // nodes() 재부착으로 위치 재측정
+    syncConnectors();
+    syncRotateZones();
+    syncResizeAnchors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync 함수들은 매 렌더 새로 생성되므로 deps에 넣지 않음
+  }, [liveResize]);
 
   // 섹션 도구를 벗어나는 순간 selectedIds에 있던 것들을 그룹으로 확정
   const prevToolRef = useRef(tool);
@@ -149,14 +207,9 @@ export default function Canvas({
     }
   }, [tool, selectedIds, onSetGroup]);
 
-  // 이미지/영상을 참조하는 댓글 동기화
   function registerNode(id: string, node: Konva.Group | null) {
-    if (node) {
-      nodeMapRef.current.set(id, node);
-      syncDependentComments(id);
-    } else {
-      nodeMapRef.current.delete(id);
-    }
+    if (node) nodeMapRef.current.set(id, node);
+    else nodeMapRef.current.delete(id);
   }
 
   // 더블클릭 (편집 시작 + 그룹에서의 선택)
@@ -166,70 +219,70 @@ export default function Canvas({
       selectOnly(item.id);
       return;
     }
-    if (item.type !== 'text' && item.type !== 'comment') return;
+    if (item.type !== 'memo') return;
     startEditing(item.id);
   }
 
-  // 선택된 노드를 Transformer에 결합/분리, 선택된 노드의 댓글 위치 갱신을 동시에 수행
-  useEffect(() => {
+  // 선택된 노드를 Transformer에 결합/분리
+  useLayoutEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
     if (isSelectTool(tool) && selectedIds.size >= 1) {
-      const commentIds = new Set(items.filter((it) => it.type === 'comment').map((it) => it.id));
       const nodes = Array.from(selectedIds)
-        .filter((id) => !commentIds.has(id))
         .map((id) => nodeMapRef.current.get(id))
         .filter((node): node is Konva.Group => !!node);
       transformer.nodes(nodes);
     } else {
       transformer.nodes([]);
     }
-    syncRotateZones();
-    transformer.getLayer()?.batchDraw();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncRotateZones는 매 렌더 새로 생성되는 함수라 deps에 넣으면 무의미해짐
-  }, [tool, selectedIds, items]);
-
-  // 드래그/변형이 진행 중일 때마다 커넥터/회전 가능 영역/댓글의 위치를 함께 갱신
-  function handleItemLiveChange(item: CanvasItem) {
     syncConnectors();
     syncRotateZones();
-    syncDependentComments(item.id);
+    syncResizeAnchors();
+    transformer.getLayer()?.batchDraw();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncRotateZones/syncResizeAnchors는 매 렌더 새로 생성되는 함수라 deps에 넣으면 무의미해짐
+  }, [tool, selectedIds, items]);
+
+  // 드래그/변형 중 컨트롤 위치를 함께 갱신 (명령형 갱신이라 재렌더가 없어서 필요)
+  function handleItemLiveChange() {
+    syncConnectors();
+    syncRotateZones();
+    syncResizeAnchors();
   }
 
-  const editingItem = items.find((i) => i.id === editingItemId);
+  const editingItem = editingItemId ? itemsById.get(editingItemId) : undefined;
+  const colorPickerItem = openMemoId ? itemsById.get(openMemoId) : undefined;
 
-  // 렌더 순서(z-order) 계층: 0=미선택 요소, 1=미선택 요소의 댓글, 2=선택된 요소, 3=선택된 요소의 댓글
-  function getRenderTier(item: CanvasItem): number {
-    const isSelected = selectedIds.has(item.id);
-    if (item.type === 'comment') return selectedIds.has(item.targetId) ? 3 : isSelected ? 2 : 1;
-    return isSelected ? 2 : 0;
-  }
-  const orderedItems = [...items].sort((a, b) => getRenderTier(a) - getRenderTier(b));
+  // 렌더 순서(z-order): 0=미선택, 1=선택 (items/selectedIds 바뀔 때만 재정렬)
+  const orderedItems = useMemo(() => {
+    function getRenderTier(item: CanvasItem): number {
+      return selectedIds.has(item.id) ? 1 : 0;
+    }
+    return [...items].sort((a, b) => getRenderTier(a) - getRenderTier(b));
+  }, [items, selectedIds]);
 
   // 개별 테두리
   function showIndividualBorder(item: CanvasItem) {
-    if (!selectedIds.has(item.id)) return false;
-    return item.type === 'comment' || selectedIds.size > 1;
-  }
-
-  // 비동기 이미지/영상 로드 중 좌상단 폴백 위치가 찍히지 않도록 함
-  function isReady(item: CanvasItem) {
-    return item.type !== 'comment' || !!nodeMapRef.current.get(item.targetId);
+    return selectedIds.has(item.id) && selectedIds.size > 1;
   }
 
   function renderItem(item: CanvasItem) {
     return (
       <CanvasKonvaItem
         key={item.id}
-        item={resolveItemForRender(item)}
+        item={item}
         tool={tool}
         stageScale={scale}
+        isSelected={selectedIds.size === 1 && selectedIds.has(item.id)}
         showIndividualBorder={showIndividualBorder(item)}
         isEditing={editingItemId === item.id}
-        isReady={isReady(item)}
+        liveText={editingItemId === item.id ? draftText : undefined}
+        liveResize={item.type === 'memo' && liveResize?.id === item.id ? liveResize : undefined}
         onSelect={handleItemMouseDown}
         onConnectorStart={handleConnectorMouseDown}
-        onCommentTarget={handleCommentTargetClick}
+        onToggleColorPicker={handleToggleColorPicker}
+        onCycleViewMode={handleCycleViewMode}
+        onResizeStart={startResize}
+        registerMenuNode={registerMenuNode}
         onGestureEnd={scheduleCommit}
         onLiveChange={handleItemLiveChange}
         onItemDblClick={handleItemDblClick}
@@ -286,10 +339,10 @@ export default function Canvas({
             selectedConnectorId={selectedConnectorId}
             tool={tool}
             registerLine={registerLine}
+            registerDot={registerDot}
             onConnectorClick={handleConnectorClick}
             previewLineRef={previewLineRef}
           />
-          {/* eslint-disable-next-line react-hooks/refs -- 의도적: isReady가 매 렌더 최신 등록 여부를 직접 읽음 */}
           {orderedItems.map(renderItem)}
           <ReconnectHandles
             connectors={connectors}
@@ -305,14 +358,35 @@ export default function Canvas({
             transformerRef={transformerRef}
             registerRotateZone={registerRotateZone}
             onRotateZonePointerDown={handleRotateZonePointerDown}
+            disableCornerAnchors={isSingleMemoSelected}
+            memoCornerConfig={memoCornerConfig}
+            registerResizeAnchor={registerResizeAnchor}
+            onResizeAnchorMouseDown={handleAnchorMouseDown}
+            registerBorderNode={registerBorderNode}
           />
         </Layer>
       </Stage>
 
-      <CanvasSwitcher />
-
       {editingItemId && overlayRect && (
-        <TextEditOverlay editingItem={editingItem} editingItemId={editingItemId} overlayRect={overlayRect} onFinishEditing={handleFinishEditing} />
+        <MemoEditOverlay
+          editingItem={editingItem}
+          editingItemId={editingItemId}
+          overlayRect={overlayRect}
+          onFinishEditing={handleFinishEditing}
+          onChangeText={handleDraftChange}
+        />
+      )}
+
+      {openMemoId && colorPickerRect && colorPickerItem?.type === 'memo' && (
+        <MemoColorPicker
+          rect={colorPickerRect}
+          selected={colorPickerItem.color}
+          onSelect={(color) => {
+            onSetMemoColor(openMemoId, color);
+            closeColorPicker();
+          }}
+          onClose={closeColorPicker}
+        />
       )}
 
       {selectionBox && (
@@ -323,4 +397,6 @@ export default function Canvas({
       )}
     </div>
   );
-}
+});
+
+export default Canvas;

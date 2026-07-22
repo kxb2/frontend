@@ -4,19 +4,18 @@ import { useRef } from 'react';
 import MouseIcon from '@/app/canvas/_components/icons/mouse.svg';
 import HandIcon from '@/app/canvas/_components/icons/hand.svg';
 import ImageIcon from '@/app/canvas/_components/icons/image.svg';
-import TextIcon from '@/app/canvas/_components/icons/text.svg';
-import CommentIcon from '@/app/canvas/_components/icons/comment.svg';
+import MemoIcon from '@/app/canvas/_components/icons/memo.svg';
 import ConnectorIcon from '@/app/canvas/_components/icons/connector.svg';
 import SectionIcon from '@/app/canvas/_components/icons/section.svg';
 
-export type Tool = 'mouse' | 'hand' | 'image' | 'text' | 'comment' | 'connector' | 'section';
+export type Tool = 'mouse' | 'hand' | 'image' | 'memo' | 'connector' | 'section';
 
 export function isSelectTool(tool: Tool) {
   return tool === 'mouse' || tool === 'section';
 }
 
 export function isItemListeningTool(tool: Tool) {
-  return isSelectTool(tool) || tool === 'connector' || tool === 'comment';
+  return isSelectTool(tool) || tool === 'connector';
 }
 
 interface ToolButtonProps {
@@ -33,8 +32,7 @@ function ToolButton({ selected, label, onClick, children }: ToolButtonProps) {
       aria-label={label}
       aria-pressed={selected}
       onClick={onClick}
-      className={`flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl ${selected ? 'text-white' : 'text-text-secondary hover:bg-border'}`}
-      style={selected ? { backgroundImage: 'linear-gradient(144deg, var(--color-primary) 0%, var(--color-secondary) 147%)' } : undefined}
+      className={`flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl ${selected ? 'bg-background text-primary' : 'text-text-secondary hover:bg-border'}`}
     >
       {children}
     </button>
@@ -83,11 +81,8 @@ export default function Toolbar({ tool, onToolChange, onFiles }: ToolbarProps) {
           e.target.value = '';
         }}
       />
-      <ToolButton label="텍스트" selected={tool === 'text'} onClick={() => onToolChange('text')}>
-        <TextIcon className="size-6" />
-      </ToolButton>
-      <ToolButton label="댓글" selected={tool === 'comment'} onClick={() => onToolChange('comment')}>
-        <CommentIcon className="size-6" />
+      <ToolButton label="메모" selected={tool === 'memo'} onClick={() => onToolChange('memo')}>
+        <MemoIcon className="size-6" />
       </ToolButton>
 
       <Divider />

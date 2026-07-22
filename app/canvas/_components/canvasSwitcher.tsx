@@ -1,20 +1,28 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import ChevronDownIcon from '@/app/components/icons/chevron-down.svg';
+import PlusIcon from '@/app/components/icons/plus.svg';
+import type { CanvasEntry } from '@/types/canvas';
 
-// 임시 캔버스 목록 데이터
-const CANVASES = [
-  { id: 1, name: 'Canvas 1', state: '저장됨', time: '방금전' },
-  { id: 2, name: 'Canvas 2', state: '변경사항 없음', time: '2분 전' },
-  { id: 3, name: 'Canvas 3', state: '저장됨', time: '5분 전' },
-];
+interface CanvasSwitcherProps {
+  canvases: CanvasEntry[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onAdd: () => void;
+}
 
-export default function CanvasSwitcher() {
+export default function CanvasSwitcher({ canvases, selectedId, onSelect, onAdd }: CanvasSwitcherProps) {
   const [open, setOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState(1);
-  const selected = CANVASES.find((canvas) => canvas.id === selectedId) ?? CANVASES[0];
+  const selected = canvases.find((canvas) => canvas.id === selectedId) ?? canvases[0];
   const rootRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // 새 캔버스가 추가되면 목록 맨 아래로 스크롤
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [canvases.length]);
 
   // 드롭다운이 열려있을 때 바깥을 클릭하면 닫힘
   useEffect(() => {
@@ -33,7 +41,6 @@ export default function CanvasSwitcher() {
       onPointerDown={(e) => e.stopPropagation()}
     >
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-black bg-card px-5 py-3">
-        <div className="size-5 shrink-0 bg-white" />
         <div className="flex items-center gap-3.5">
           <p className="text-title-semibold text-text-primary">{selected.name}</p>
           <div className="flex items-center justify-center rounded-xl bg-background px-2 py-1">
@@ -45,17 +52,19 @@ export default function CanvasSwitcher() {
 
       {open && (
         <div className="flex w-81.5 flex-col items-start gap-4.75 overflow-hidden rounded-2xl bg-card px-6.5 py-5.5">
-          <div className="flex w-full flex-col items-start">
-            {CANVASES.map((canvas) => {
+          <div ref={listRef} className="scrollbar-none flex max-h-62 w-full flex-col items-start overflow-y-auto">
+            {canvases.map((canvas) => {
               const isSelected = canvas.id === selectedId;
               return (
                 <button
                   key={canvas.id}
                   type="button"
-                  onClick={() => setSelectedId(canvas.id)}
+                  onClick={() => onSelect(canvas.id)}
                   className={`group flex w-full cursor-pointer items-center gap-4.25 rounded-2xl p-3 text-left ${isSelected ? 'bg-card-secondary' : 'hover:bg-background/40'}`}
                 >
-                  <div className={`h-8.25 w-19 shrink-0 rounded-xl border bg-background ${isSelected ? 'border-primary' : 'border-border'}`} />
+                  <div className={`relative h-8.25 w-19 shrink-0 overflow-hidden rounded-xl border bg-background ${isSelected ? 'border-primary' : 'border-border'}`}>
+                    {canvas.thumbnail && <Image src={canvas.thumbnail} alt="" fill unoptimized className="object-cover" />}
+                  </div>
                   <div className="flex flex-col items-start gap-px">
                     <p className={`text-label-semibold-14 font-en ${isSelected ? 'text-primary-variant' : 'text-text-primary'}`}>{canvas.name}</p>
                     <p className={`text-label-regular-14 ${isSelected ? 'text-text-secondary' : 'text-[#a1a8bd] group-hover:text-text-secondary'}`}>
@@ -66,6 +75,13 @@ export default function CanvasSwitcher() {
               );
             })}
           </div>
+
+          <div className="h-px w-full bg-border" />
+
+          <button type="button" onClick={onAdd} className="flex cursor-pointer items-center gap-3 text-left">
+            <PlusIcon className="box-border size-6 shrink-0 p-1.25 text-text-secondary [&>path]:stroke-[1.25]" />
+            <p className="text-label-semibold-14 text-text-secondary">새 캔버스 추가</p>
+          </button>
         </div>
       )}
     </div>
