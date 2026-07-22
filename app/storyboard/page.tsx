@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import FormField from '@/app/components/FormField';
 import { storyboardFields } from '@/app/data/storyboardFields';
 import ImageGrid from '@/app/storyboard/image/imagegrid';
 import PromptBox from '@/app/storyboard/promptbox/propmptbox';
-import { createStoryboard, getGeneration } from '@/app/api/storyboard/api';
+import { createStoryboard, getGeneration, getIntegratedPrompt, exportPdf, exportImage, getExport } from '@/app/api/storyboard/api';
 import { GenerationResult } from '@/types/api';
 
 // page.tsx
@@ -13,10 +13,38 @@ export default function Storyboard() {
   // 필드 id 별로 값을 모아두는 state(ex: {scenario: '...', genre: 'ROMANCE', reference: [File, File]})
   const [formValues, setFormValues] = useState<Record<string, string | File[]>>({});
 
+  // 생성된 스토리보드 id (내보내기 요청 시 필요)
+  const [storyboardId, setStoryboardId] = useState<number | null>(null);
   // 9컷 생성 결과 (완료되면 여기에 저장)
   const [generation, setGeneration] = useState<GenerationResult | null>(null);
+  // 통합 프롬프트 (별도 엔드포인트에서 조회해서 저장)
+  const [integratedPrompt, setIntegratedPrompt] = useState<string | null>(null);
   // 버튼 눌렀을 때 로딩 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 내보내기 드롭다운(이미지/PDF 선택지)을 띄울지 여부
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  // 내보내기 진행 중 로딩 상태
+  const [isExporting, setIsExporting] = useState(false);
+  // 드롭다운 바깥을 클릭하면 닫기 위한 영역 참조
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // 드롭다운이 열려있을 때 바깥 영역 클릭 시 닫기
+  useEffect(() => {
+    if (!showExportMenu) return;
+
+    // 마우스 클릭 이벤트가 발생 했을 때
+    const handleClickOutside = (event: MouseEvent) => {
+      // 클릭한 지점이 드롭다운 영역 바깥이면 닫기
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    // 클릭 이벤트를 추가한 후 사용했다가 삭제
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExportMenu]);
 
   // 필드의 데이터를 가져오는 함수
   const handleFieldChange = (id: string, value: string | File[]) => {
@@ -27,15 +55,17 @@ export default function Storyboard() {
   // generationId로 상태를 반복 조회하다가, 완료되면 결과를 저장
   // attempt는 몇 번째인지 세는 카운터
   const pollGeneration = async (generationId: number, attempt = 0): Promise<void> => {
-    // 무한 호출을 방지하기 위해 30번 넘게 안끝나면 에러 던짐
-    if (attempt > 30) {
+    // 무한 호출을 방지하기 위해 90번(약 3분) 넘게 안끝나면 에러 던짐
+    // (9컷 이미지 생성이 실제로는 수십 초~수 분 걸릴 수 있어서 기존 30번/60초보다 넉넉하게 잡음)
+    if (attempt > 90) {
       throw new Error('생성 시간이 너무 오래 걸립니다.');
     }
 
     const result = await getGeneration(generationId);
 
     // 서버가 준비되면 완성된 실제 데이터 전송
-    if (result.status === 'COMPLETED') {
+    // 백엔드가 상태값을 소문자('completed')로 내려주므로 대소문자 구분 없이 비교
+    if (result.status.toLowerCase() === 'completed') {
       setGeneration(result);
       return;
     }
@@ -58,8 +88,13 @@ export default function Storyboard() {
     setIsSubmitting(true);
     try {
       // 스토리보드 생성 요청 후 폴링 함수 시작
-      const { generationId } = await createStoryboard(formValues);
+      // 원래 변수명 : 새 변수명 형식으로 저장
+      const { storyboardId: newStoryboardId, generationId } = await createStoryboard(formValues);
+      setStoryboardId(newStoryboardId);
       await pollGeneration(generationId);
+      // 9컷 생성이 끝나면 통합 프롬프트를 별도로 조회
+      const promptResult = await getIntegratedPrompt(newStoryboardId);
+      setIntegratedPrompt(promptResult.integratedPrompt);
     } catch (error) {
       console.error(error);
       alert('스토리보드 생성에 실패했습니다.');
@@ -69,13 +104,56 @@ export default function Storyboard() {
     }
   };
 
+  // exportId로 상태를 반복 조회하다가, 완료되면 결과를 반환(생성 폴링과 동일한 패턴)
+  const pollExport = async (exportId: number, attempt = 0): Promise<{ downloadUrl: string | null; errorMessage: string | null }> => {
+    if (attempt > 30) {
+      throw new Error('내보내기 시간이 너무 오래 걸립니다.');
+    }
+
+    const result = await getExport(exportId);
+    const status = result.status.toLowerCase();
+
+    if (status === 'completed') {
+      return result;
+    }
+    if (status === 'failed') {
+      throw new Error(result.errorMessage ?? '내보내기에 실패했습니다.');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return pollExport(exportId, attempt + 1);
+  };
+
+  // 내보내기 드롭다운에서 이미지/PDF 중 하나를 선택했을 때 실행
+  const handleExport = async (type: 'image' | 'pdf') => {
+    if (!storyboardId) return;
+
+    setShowExportMenu(false);
+    setIsExporting(true);
+    try {
+      // type의 따라 호출하는 함수 변경
+      const { exportId } = type === 'pdf' ? await exportPdf(storyboardId) : await exportImage(storyboardId, true);
+      const result = await pollExport(exportId);
+
+      if (result.downloadUrl) {
+        // 새 탭에서 다운로드 링크 열기
+        window.open(result.downloadUrl, '_blank');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('내보내기에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-neutral-950 text-gray-100">
+    <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl bg-neutral-900 p-5 text-white">
+        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto rounded-2xl p-5 text-text-primary">
           <div>
             <h2 className="text-base font-semibold">AI Storyboard</h2>
-            <p className="mt-1 text-xs text-gray-400">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
+            <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
           </div>
           <div className="flex flex-col gap-3">
             {storyboardFields.map((field) => (
@@ -83,7 +161,7 @@ export default function Storyboard() {
             ))}
           </div>
           {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
-          <button className="mt-4 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-3 text-sm font-semibold text-white disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
+          <button className="mt-4 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-3 text-sm font-semibold text-text-primary disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
             </svg>
@@ -93,7 +171,7 @@ export default function Storyboard() {
 
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-100">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
                 <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -101,29 +179,34 @@ export default function Storyboard() {
                 <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
               </svg>
               My Storyboard
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
-                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
             </div>
-            <div className="flex gap-2">
-              <button className="flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1.5 text-xs text-gray-300">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 4h16v16H4z" stroke="currentColor" strokeWidth="1.5" />
+            <div className="relative flex gap-2" ref={exportMenuRef}>
+              <button type="button" onClick={() => setShowExportMenu((prev) => !prev)} disabled={!storyboardId || isExporting} className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary disabled:cursor-not-allowed disabled:opacity-40">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M8 9.66667V0.5M4.66667 3.83333L8 0.5L11.3333 3.83333M3.28667 0.5H2.16667C1.72464 0.5 1.30072 0.675595 0.988155 0.988156C0.675595 1.30072 0.5 1.72464 0.5 2.16667V13.8333C0.5 14.2754 0.675595 14.6993 0.988155 15.0118C1.30072 15.3244 1.72464 15.5 2.16667 15.5H13.8333C14.2754 15.5 14.6993 15.3244 15.0118 15.0118C15.3244 14.6993 15.5 14.2754 15.5 13.8333V2.16667C15.5 1.72464 15.3244 1.30072 15.0118 0.988156C14.6993 0.675595 14.2754 0.5 13.8333 0.5H12.7133"
+                    stroke="white"
+                  />
                 </svg>
-                메모
+                {isExporting ? '내보내는 중...' : '내보내기'}
               </button>
-              <button className="flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1.5 text-xs text-gray-300">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                내보내기
-              </button>
+
+              {showExportMenu && (
+                <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
+                  <button type="button" onClick={() => handleExport('image')} className="w-full px-3 py-2 text-left text-xs text-text-secondary hover:bg-card">
+                    이미지로 내보내기
+                  </button>
+                  <button type="button" onClick={() => handleExport('pdf')} className="w-full px-3 py-2 text-left text-xs text-text-secondary hover:bg-card">
+                    PDF로 내보내기
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2">
-            <ImageGrid cuts={generation?.cuts} />
-            <PromptBox promptText={generation?.integratedPrompt ?? undefined} />
+          <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2 overflow-y-auto pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
+            <ImageGrid cuts={generation?.cuts} storyboardId={storyboardId} />
+            <PromptBox promptText={integratedPrompt ?? undefined} />
           </div>
         </div>
       </div>
