@@ -19,7 +19,7 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
 
   // regenerationId로 상태를 반복 조회하다가, 완료되면 새 이미지 주소를 반환(내보내기 폴링과 동일한 패턴)
   const pollRegeneration = async (regenerationId: number, attempt = 0): Promise<string | null> => {
-    if (attempt > 120) {
+    if (attempt > 60) {
       throw new Error('재생성 시간이 너무 오래 걸립니다.');
     }
 
@@ -33,7 +33,7 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
       throw new Error(result.errorMessage ?? '컷 재생성에 실패했습니다.');
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     return pollRegeneration(regenerationId, attempt + 1);
   };
 
