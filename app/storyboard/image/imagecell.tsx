@@ -19,7 +19,7 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
 
   // regenerationId로 상태를 반복 조회하다가, 완료되면 새 이미지 주소를 반환(내보내기 폴링과 동일한 패턴)
   const pollRegeneration = async (regenerationId: number, attempt = 0): Promise<string | null> => {
-    if (attempt > 90) {
+    if (attempt > 120) {
       throw new Error('재생성 시간이 너무 오래 걸립니다.');
     }
 

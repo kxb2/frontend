@@ -57,7 +57,7 @@ export default function Storyboard() {
   const pollGeneration = async (generationId: number, attempt = 0): Promise<void> => {
     // 무한 호출을 방지하기 위해 90번(약 3분) 넘게 안끝나면 에러 던짐
     // (9컷 이미지 생성이 실제로는 수십 초~수 분 걸릴 수 있어서 기존 30번/60초보다 넉넉하게 잡음)
-    if (attempt > 90) {
+    if (attempt > 300) {
       throw new Error('생성 시간이 너무 오래 걸립니다.');
     }
 
@@ -106,7 +106,7 @@ export default function Storyboard() {
 
   // exportId로 상태를 반복 조회하다가, 완료되면 결과를 반환(생성 폴링과 동일한 패턴)
   const pollExport = async (exportId: number, attempt = 0): Promise<{ downloadUrl: string | null; errorMessage: string | null }> => {
-    if (attempt > 30) {
+    if (attempt > 90) {
       throw new Error('내보내기 시간이 너무 오래 걸립니다.');
     }
 
