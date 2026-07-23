@@ -31,15 +31,17 @@ export const storyboardFields: StoryBoardField[] = [
     accept: 'image/*',
     maxFiles: 10,
   },
-  {
-    id: 'imageModel',
-    type: 'modelSelect',
-    label: '4. 이미지 생성 모델',
-    description: '스토리보드 이미지를 생성할 모델을 선택해주세요.',
-    options: [
-      { label: 'ChatGPT Images 2.0', value: 'chatgpt', description: 'OpenAI 최신 이미지 생성 모델' },
-      { label: 'Nano Banana 2', value: 'nano-banana-2', description: 'Gemini 3.1 최신 이미지 생성 모델' },
-    ],
-    defaultValue: 'chatgpt',
-  },
 ];
+
+// 이미지 생성 모델 선택(2번 분위기 선택 카드의 '고급 옵션'에서 노출됨)
+export const imageModelField: StoryBoardField & { type: 'modelSelect' } = {
+  id: 'imageModel',
+  type: 'modelSelect',
+  label: '이미지 생성 모델',
+  description: '스토리보드 이미지를 생성할 모델을 선택해주세요.',
+  options: [
+    { label: 'ChatGPT Images 2.0', value: 'gpt_image', description: 'OpenAI 최신 이미지 생성 모델' },
+    { label: 'Nano Banana 2', value: 'gemini_3_1_flash_image', description: 'Gemini 3.1 최신 이미지 생성 모델' },
+  ],
+  defaultValue: 'gpt_image',
+};

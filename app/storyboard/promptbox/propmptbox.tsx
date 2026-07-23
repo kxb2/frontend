@@ -46,9 +46,7 @@ export default function PromptBox({ promptText }: PromptBoxProps) {
       </div>
 
       <div
-        className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${
-          isExpanded ? 'max-h-48 overflow-y-auto scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent' : 'line-clamp-3'
-        }`}
+        className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${isExpanded ? '' : 'line-clamp-3'}`}
       >
         {promptText ?? '프롬프트'}
       </div>

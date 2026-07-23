@@ -19,7 +19,7 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
 
   // regenerationId로 상태를 반복 조회하다가, 완료되면 새 이미지 주소를 반환(내보내기 폴링과 동일한 패턴)
   const pollRegeneration = async (regenerationId: number, attempt = 0): Promise<string | null> => {
-    if (attempt > 30) {
+    if (attempt > 90) {
       throw new Error('재생성 시간이 너무 오래 걸립니다.');
     }
 
@@ -59,7 +59,10 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
   return (
     <div className="relative w-full h-full">
       {/* 이미지 표시 영역: 여기에만 overflow-hidden을 둬서, 아래 프롬프트 팝업이 셀 밖으로 나가도 안 잘리게 함 */}
-      <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20  flex items-center justify-center">{currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}</div>
+      {/* 프롬프트 팝업이 열려있을 때는 이 컷의 이미지만 흐릿하고 어둡게 처리 */}
+      <div className={`absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 flex items-center justify-center transition-[filter] ${showPrompt && promptText ? 'blur-sm brightness-50' : ''}`}>
+        {currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}
+      </div>
 
       <span className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl bg-background text-[14px] font-semibold text-primary-variant">{String(shotNumber).padStart(2, '0')}</span>
 
@@ -83,9 +86,9 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
         )}
       </button>
 
-      {/* 버튼을 누르면 이 컷의 프롬프트만 작게 띄움 */}
+      {/* 버튼을 누르면 이 컷의 프롬프트를 크게 띄움 */}
       {showPrompt && promptText && (
-        <div className="absolute right-2 top-10 z-20 max-h-32 w-56 overflow-y-auto rounded-lg border border-border bg-background p-2 text-[11px] text-text-secondary shadow-lg scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="absolute right-2 top-10 z-20 max-h-9/10 w-9/10 overflow-y-auto rounded-lg border border-border bg-background p-3 text-xs text-text-secondary shadow-lg scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
           {promptText}
         </div>
       )}

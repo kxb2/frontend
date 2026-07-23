@@ -15,10 +15,17 @@ export async function createStoryboard(formValues: Record<string, string | File[
   formData.append('scenario_text', (formValues.scenario as string) ?? '');
   formData.append('genre', (formValues.genre as string) ?? '');
 
+  // 선택 필드(값이 있을 때만 전송)
+  // if (formValues.style) formData.append('style', formValues.style as string);
+  // if (formValues.tone) formData.append('tone', formValues.tone as string);
+  // if (formValues.aspectRatio) formData.append('aspect_ratio', formValues.aspectRatio as string);
+  // if (formValues.era) formData.append('era', formValues.era as string);
+  if (formValues.imageModel) formData.append('image_model', formValues.imageModel as string);
+
   // ?? -> 값이 없는 경우 undefined를 방지하기 위해 빈 배열을 넣음
   const referenceFiles = (formValues.reference as File[]) ?? [];
   // 파일 개수만큼 반복해서 append를 실행
-  referenceFiles.forEach((file) => formData.append('referenceImages', file));
+  referenceFiles.forEach((file) => formData.append('reference_images', file));
 
   // 백엔드 서버로 직접 요청
   const response = await fetch(`${API_BASE_URL}/storyboards`, {
