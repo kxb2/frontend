@@ -1,5 +1,5 @@
 import type Konva from 'konva';
-import { rotateAround } from '@/app/canvas/_components/canvasUtils';
+import { rotateAround } from '@/app/canvas/_components/core/utils';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
 

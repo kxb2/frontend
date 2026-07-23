@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import CheckIcon from '@/app/canvas/_components/tools/memo/check.svg';
+import CheckIcon from '@/app/canvas/_components/icons/check.svg';
 import type { MemoColor } from '@/types/canvas';
 import type { ColorPickerRect } from '@/app/canvas/_components/tools/memo/useMemoColorPicker';
 

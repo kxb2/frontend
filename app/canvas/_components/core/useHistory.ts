@@ -7,7 +7,7 @@ function resolveUpdater<T>(updater: Updater<T>, prev: T): T {
 }
 
 // 실행취소/다시실행이 가능한 상태 하나를 관리 (set()은 히스토리에 남기지 않고, commit()은 undo 스택에 이전 상태를 남기는 갱신)
-export function useHistoryState<T>(initial: T) {
+export function useHistory<T>(initial: T) {
   const [state, setState] = useState(initial);
   const undoStack = useRef<T[]>([]);
   const redoStack = useRef<T[]>([]);

@@ -1,7 +1,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 import type Konva from 'konva';
 
-interface UseStagePanZoomParams {
+interface UseViewportParams {
   rootRef: RefObject<HTMLDivElement | null>;
   gridRef: RefObject<HTMLDivElement | null>;
   stageRef: RefObject<Konva.Stage | null>;
@@ -12,7 +12,7 @@ const MAX_SCALE = 4;
 const WHEEL_SCALE_STEP = 1.05;
 
 // Stage의 팬/줌 상태(scale, stagePos)와 그 계산에 필요한 헬퍼(휠 줌, 화면→논리 좌표 변환)를 관리
-export function useStagePanZoom({ rootRef, gridRef, stageRef }: UseStagePanZoomParams) {
+export function useViewport({ rootRef, gridRef, stageRef }: UseViewportParams) {
   const [size, setSize] = useState({ width: 800, height: 600 });
   const [scale, setScale] = useState(1);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
@@ -32,7 +32,7 @@ export function useStagePanZoom({ rootRef, gridRef, stageRef }: UseStagePanZoomP
   // 그리드는 줌 영향 안 받는 별도 레이어에 그리고 배율/위치만 동기화
   useEffect(() => {
     if (!gridRef.current) return;
-    gridRef.current.style.backgroundSize = `${80 * scale}px ${80 * scale}px`;
+    gridRef.current.style.backgroundSize = `${64 * scale}px ${64 * scale}px`;
     gridRef.current.style.backgroundPosition = `${stagePos.x}px ${stagePos.y}px`;
   }, [gridRef, scale, stagePos]);
 

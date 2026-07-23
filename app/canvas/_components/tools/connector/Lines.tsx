@@ -2,14 +2,14 @@ import { Fragment, type RefObject } from 'react';
 import type Konva from 'konva';
 import { Circle, Line } from 'react-konva';
 import type { Connector } from '@/types/canvas';
-import type { Tool } from '@/app/canvas/_components/toolbar';
-import { getConnectorAnchors, getConnectorCurvePoints } from '@/app/canvas/_components/tools/connector/connectorCurve';
+import type { Tool } from '@/app/canvas/_components/core/Toolbar';
+import { getConnectorAnchors, getConnectorCurvePoints } from '@/app/canvas/_components/tools/connector/curve';
 
 const CONNECTOR_COLOR = '#BFC7D6';
 const CONNECTOR_SELECTED_COLOR = '#fff';
 const CONNECTOR_DOT_RADIUS = 4;
 
-interface ConnectorLinesProps {
+interface LinesProps {
   connectors: Connector[];
   nodeMapRef: RefObject<Map<string, Konva.Group>>;
   selectedConnectorId: string | null;
@@ -21,7 +21,7 @@ interface ConnectorLinesProps {
 }
 
 // 커넥터 (좌표 없이 {id,fromId,toId}만 저장하고 항상 두 노드의 현재 위치에서 다시 계산)
-export default function ConnectorLines({ connectors, nodeMapRef, selectedConnectorId, tool, registerLine, registerDot, onConnectorClick, previewLineRef }: ConnectorLinesProps) {
+export default function Lines({ connectors, nodeMapRef, selectedConnectorId, tool, registerLine, registerDot, onConnectorClick, previewLineRef }: LinesProps) {
   return (
     <>
       {/* eslint-disable-next-line react-hooks/refs -- 의도적: 매 렌더 최신 좌표를 직접 읽어야 한다 */}

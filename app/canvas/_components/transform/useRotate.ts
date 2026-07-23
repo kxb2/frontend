@@ -1,7 +1,10 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type Konva from 'konva';
-import { rotateAround, trackWindowGesture } from '@/app/canvas/_components/canvasUtils';
-import { isSelectTool, type Tool } from '@/app/canvas/_components/toolbar';
+import type { CanvasItem } from '@/types/canvas';
+import { rotateAround, trackWindowGesture } from '@/app/canvas/_components/core/utils';
+import { expandSectionChildrenIds } from '@/app/canvas/_components/transform/useSelect';
+import { snapRotationDeg } from '@/app/canvas/_components/transform/math';
+import { isSelectTool, type Tool } from '@/app/canvas/_components/core/Toolbar';
 
 export const CORNER_ANCHORS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
 export type CornerAnchor = (typeof CORNER_ANCHORS)[number];
@@ -22,23 +25,25 @@ export const CORNER_ZONE_PIVOT: Record<CornerAnchor, { x: number; y: number }> =
 export const ROTATE_CURSOR =
   'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="black" stroke="white" stroke-width="0.5"/></svg>\') 12 12, pointer';
 
-interface UseRotateZonesParams {
+interface UseRotateParams {
   tool: Tool;
   selectedIds: Set<string>;
+  items: CanvasItem[]; // 선택된 섹션의 소속 아이템을 같이 회전시키기 위함
   transformerRef: RefObject<Konva.Transformer | null>;
   nodeMapRef: RefObject<Map<string, Konva.Group>>;
   scale: number;
   stagePos: { x: number; y: number };
   screenToLogical: (clientX: number, clientY: number) => { x: number; y: number };
   syncConnectors: () => void;
-  syncResizeAnchors?: () => void; // 메모의 컨트롤(useMemoResizeAnchors)도 매 프레임 명시적으로 동기화
+  syncResizeAnchors?: () => void; // 메모의 컨트롤(useMemoAnchors)도 매 프레임 명시적으로 동기화
   onRotateEnd: () => void;
 }
 
 // 꼭짓점 4개에 회전 가능 영역을 별도로 마련하고, 기본 앵커는 크기 변경만 가능하게 함
-export function useRotateZones({
+export function useRotate({
   tool,
   selectedIds,
+  items,
   transformerRef,
   nodeMapRef,
   scale,
@@ -47,7 +52,7 @@ export function useRotateZones({
   syncConnectors,
   syncResizeAnchors,
   onRotateEnd,
-}: UseRotateZonesParams) {
+}: UseRotateParams) {
   const rotateZoneRefs = useRef<Partial<Record<CornerAnchor, Konva.Rect>>>({});
 
   // Transformer의 현재 박스를 기준으로 꼭짓점 4개의 실제 위치를 계산해 회전 가능 영역을 그리로 옮김
@@ -102,7 +107,8 @@ export function useRotateZones({
     const rot = transformer.rotation();
     const center = rotateAround(x + w / 2, y + h / 2, x, y, rot);
 
-    const nodes = Array.from(selectedIds)
+    // 선택된 섹션이 있으면 그 소속 아이템들도 함께 회전 대상에 포함 (섹션은 그룹처럼 동작)
+    const nodes = Array.from(expandSectionChildrenIds(items, selectedIds))
       .map((id) => nodeMapRef.current.get(id))
       .filter((node): node is Konva.Group => !!node);
     if (nodes.length === 0) return;
@@ -115,7 +121,8 @@ export function useRotateZones({
       (moveEvent) => {
         const cur = screenToLogical(moveEvent.clientX, moveEvent.clientY);
         const curAngle = Math.atan2(cur.y - center.y, cur.x - center.x);
-        const deltaDeg = ((curAngle - startAngle) * 180) / Math.PI;
+        // Shift를 누른 채면 15도 단위로 스냅(수평/수직 정렬이 쉬워짐)
+        const deltaDeg = snapRotationDeg(((curAngle - startAngle) * 180) / Math.PI, moveEvent.shiftKey);
         startStates.forEach((start) => {
           const node = nodeMapRef.current.get(start.id);
           if (!node) return;
