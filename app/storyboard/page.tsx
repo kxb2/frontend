@@ -57,7 +57,7 @@ export default function Storyboard() {
   const pollGeneration = async (generationId: number, attempt = 0): Promise<void> => {
     // 무한 호출을 방지하기 위해 90번(약 3분) 넘게 안끝나면 에러 던짐
     // (9컷 이미지 생성이 실제로는 수십 초~수 분 걸릴 수 있어서 기존 30번/60초보다 넉넉하게 잡음)
-    if (attempt > 90) {
+    if (attempt > 150) {
       throw new Error('생성 시간이 너무 오래 걸립니다.');
     }
 
@@ -120,7 +120,7 @@ export default function Storyboard() {
       throw new Error(result.errorMessage ?? '내보내기에 실패했습니다.');
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     return pollExport(exportId, attempt + 1);
   };
 
@@ -150,7 +150,7 @@ export default function Storyboard() {
   return (
     <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="min-w-105 w-1/4 shrink-0 flex flex-col gap-2 overflow-y-auto rounded-2xl p-4 text-text-primary">
+        <div className="min-w-100 w-1/4 shrink-0 flex flex-col gap-2 overflow-y-auto rounded-2xl p-4 text-text-primary">
           <div>
             <h2 className="text-base font-semibold">AI Storyboard</h2>
             <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
