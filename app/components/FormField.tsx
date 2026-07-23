@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { StoryBoardField } from '@/types/input';
+import { imageModelField } from '@/app/data/storyboardFields';
 
 interface Props {
   field: StoryBoardField;
@@ -21,27 +22,26 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   // 화면에 보이지 않지만 DOM 요소를 직접 조작하기 위함
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // // 고급설정 펼침 여부
-  // const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  // 고급 옵션(이미지 생성 모델 선택) 펼침 여부 - genre 필드에서만 사용
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+
   // // 고급설정 값들
-  // const [style, setStyle] = useState('');
-  // const [tone, setTone] = useState('');
-  // const [aspectRatio, setAspectRatio] = useState('');
-  // const [era, setEra] = useState('');
+  // const [style, setStyle] = useState(''); // 그림체(스타일)
+  // const [tone, setTone] = useState(''); // 톤
+  // const [aspectRatio, setAspectRatio] = useState(''); // 시대 배경
+  // const [era, setEra] = useState(''); // 화면비
 
   // 최대 업로드 가능 장수, 꽉 찼는지 여부
   const maxFiles = field.type === 'fileUpload' ? (field.maxFiles ?? 10) : 10;
   const isFull = previews.length >= maxFiles;
 
-  // 이미지 생성 모델 선택 값(기본값은 field.defaultValue)
-  // ?? 연산자 사용 방식 = 왼쪽부터 값이 있으면 그걸 쓰고, 없으면(null/undefined) 다음 걸로 넘어간다
-  // ex) field.defaultValue가 없다 -> field.options[0]?.value로 넘어가서 있는지 체크 후 없다 -> 빈 문자열 제공
-  const [selectedModel, setSelectedModel] = useState(field.type === 'modelSelect' ? (field.defaultValue ?? field.options[0]?.value ?? '') : '');
+  // 이미지 생성 모델 선택 값(기본값은 imageModelField.defaultValue) - genre 필드의 고급 옵션에서 사용
+  const [selectedImageModel, setSelectedImageModel] = useState(imageModelField.defaultValue ?? imageModelField.options[0]?.value ?? '');
 
   // 마운트 시 기본 선택값을 부모(formValues)에도 반영
   useEffect(() => {
-    if (field.type === 'modelSelect' && selectedModel) {
-      onFieldChange(field.id, selectedModel);
+    if (field.id === 'genre' && selectedImageModel) {
+      onFieldChange(imageModelField.id, selectedImageModel);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -99,7 +99,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-neutral-700 bg-[#1A1A24] p-3">
+    <div className="@container rounded-xl border border-neutral-700 bg-[#1A1A24] p-3">
       <div className="text-sm font-semibold text-gray-100">{field.label}</div>
       <div className="mt-1 text-xs text-gray-400">{field.description}</div>
 
@@ -108,7 +108,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
         {field.type === 'textarea' && (
           <div className="relative">
             <textarea
-              className="h-32 w-full resize-none rounded-lg border border-neutral-700 bg-[#1C1F2A] p-2 text-sm text-gray-100 placeholder:text-gray-500 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent"
+              className="h-56 w-full resize-none rounded-lg border border-neutral-700 bg-[#1C1F2A] p-2 text-sm text-gray-100 placeholder:text-gray-500 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent"
               placeholder={field.placeholder}
               maxLength={field.maxLength}
               value={text}
@@ -127,81 +127,65 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
 
         {/* 타입이 장르 선택인 경우 */}
         {field.type === 'select' && (
-          <div className="flex flex-row flex-wrap gap-2">
-            {field.options.map((opt) => (
-              <label key={opt.value} className="cursor-pointer">
-                <input type="radio" name={field.id} value={opt.value} className="peer sr-only" onChange={() => onFieldChange(field.id, opt.value)} />
-                <span className="inline-block rounded-full border border-neutral-700 px-4 py-1 text-sm text-gray-300 peer-checked:bg-[#1A1A24] peer-checked:border-[#C255FF] peer-checked:font-semibold peer-checked:text-white">{opt.label}</span>
-              </label>
+          <div className="flex flex-row flex-wrap gap-1">
+            {field.options.map((opt, index) => (
+              // 보이지 않는 껍데기로 감싸기
+              <Fragment key={opt.value}>
+                {/* 컨테이너 너비가 좁아지면 3번째 항목 뒤에서 강제로 줄바꿈(3개 + 2개) */}
+                {index === 3 && <div className="hidden w-full @max-sm:block" />}
+                <label className="cursor-pointer">
+                  <input type="radio" name={field.id} value={opt.value} className="peer sr-only" onChange={() => onFieldChange(field.id, opt.value)} />
+                  <span className="inline-block rounded-full border border-neutral-700 px-4 py-1 text-sm text-gray-300 peer-checked:bg-[#1A1A24] peer-checked:border-[#C255FF] peer-checked:font-semibold peer-checked:text-white">{opt.label}</span>
+                </label>
+              </Fragment>
             ))}
 
             {field.id === 'genre' && (
-              <div className="mt-2 w-full">
-                {/* 고급 설정을 직접 건들이기 전까지 주석처리 */}
-                {/* <button type="button" onClick={() => setIsAdvancedOpen((prev) => !prev)} className="flex w-full items-center justify-between text-sm text-gray-300">
-                  <span>⚙ 고급설정</span>
-                  <span className="text-gray-500">{[style, tone, aspectRatio, era].filter(Boolean).join(' · ') || ''} ⌄</span>
-                </button> */}
+              <div className="mt-3 w-full border-t border-dashed border-neutral-700 pt-3">
+                <button type="button" onClick={() => setIsAdvancedOpen((prev) => !prev)} className="flex w-full items-center justify-between text-sm text-gray-300">
+                  <span className="pl-2 flex items-center gap-2 ">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M8.05922 3.44687C8.10513 2.96382 8.32949 2.51524 8.68847 2.18877C9.04744 1.8623 9.51524 1.6814 10.0005 1.6814C10.4857 1.6814 10.9535 1.8623 11.3125 2.18877C11.6714 2.51524 11.8958 2.96382 11.9417 3.44687C11.9693 3.75892 12.0717 4.05972 12.2402 4.32382C12.4086 4.58792 12.6383 4.80755 12.9096 4.9641C13.1809 5.12066 13.486 5.20954 13.799 5.22322C14.1119 5.23691 14.4236 5.17499 14.7075 5.04271C15.1485 4.84252 15.6481 4.81356 16.1092 4.96145C16.5703 5.10934 16.9599 5.4235 17.2021 5.84279C17.4444 6.26209 17.522 6.75652 17.4198 7.22985C17.3175 7.70318 17.0429 8.12155 16.6492 8.40354C16.3929 8.58341 16.1836 8.82238 16.0391 9.10023C15.8947 9.37808 15.8193 9.68663 15.8193 9.99979C15.8193 10.313 15.8947 10.6215 16.0391 10.8994C16.1836 11.1772 16.3929 11.4162 16.6492 11.596C17.0429 11.878 17.3175 12.2964 17.4198 12.7697C17.522 13.2431 17.4444 13.7375 17.2021 14.1568C16.9599 14.5761 16.5703 14.8902 16.1092 15.0381C15.6481 15.186 15.1485 15.1571 14.7075 14.9569C14.4236 14.8246 14.1119 14.7627 13.799 14.7764C13.486 14.79 13.1809 14.8789 12.9096 15.0355C12.6383 15.192 12.4086 15.4117 12.2402 15.6758C12.0717 15.9399 11.9693 16.2407 11.9417 16.5527C11.8958 17.0358 11.6714 17.4843 11.3125 17.8108C10.9535 18.1373 10.4857 18.3182 10.0005 18.3182C9.51524 18.3182 9.04744 18.1373 8.68847 17.8108C8.32949 17.4843 8.10513 17.0358 8.05922 16.5527C8.03167 16.2406 7.9293 15.9396 7.76077 15.6754C7.59224 15.4112 7.36253 15.1916 7.09108 15.035C6.81963 14.8784 6.51444 14.7896 6.20137 14.776C5.88829 14.7624 5.57655 14.8244 5.29255 14.9569C4.85162 15.1571 4.35199 15.186 3.89088 15.0381C3.42978 14.8902 3.04019 14.5761 2.79795 14.1568C2.55571 13.7375 2.47815 13.2431 2.58035 12.7697C2.68255 12.2964 2.95722 11.878 3.35088 11.596C3.60723 11.4162 3.81649 11.1772 3.96096 10.8994C4.10542 10.6215 4.18084 10.313 4.18084 9.99979C4.18084 9.68663 4.10542 9.37808 3.96096 9.10023C3.81649 8.82238 3.60723 8.58341 3.35088 8.40354C2.95777 8.12141 2.68359 7.7032 2.58163 7.23019C2.47968 6.75718 2.55722 6.26316 2.7992 5.84413C3.04118 5.42511 3.43031 5.11102 3.89096 4.96291C4.35161 4.81479 4.85087 4.84324 5.29172 5.04271C5.57568 5.17499 5.88734 5.23691 6.2003 5.22322C6.51326 5.20954 6.81833 5.12066 7.08966 4.9641C7.361 4.80755 7.59063 4.58792 7.7591 4.32382C7.92758 4.05972 8.02995 3.75892 8.05755 3.44687M12.5 10.0001C12.5 11.3808 11.3807 12.5001 10 12.5001C8.61929 12.5001 7.5 11.3808 7.5 10.0001C7.5 8.61937 8.61929 7.50008 10 7.50008C11.3807 7.50008 12.5 8.61937 12.5 10.0001Z"
+                        stroke="white"
+                      />
+                    </svg>
+                    고급설정
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`}>
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
 
-                {/* {isAdvancedOpen && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <select
-                      value={style}
-                      onChange={(e) => {
-                        setStyle(e.target.value);
-                        onFieldChange('style', e.target.value);
-                      }}
-                      className="rounded-lg border border-gray-200 p-2 text-sm"
-                    >
-                      <option value="">그림체 선택 안 함</option>
-                      <option value="cinematic">시네마틱</option>
-                      <option value="anime">애니메이션</option>
-                      <option value="realistic">실사</option>
-                    </select>
-
-                    <select
-                      value={tone}
-                      onChange={(e) => {
-                        setTone(e.target.value);
-                        onFieldChange('tone', e.target.value);
-                      }}
-                      className="rounded-lg border border-gray-200 p-2 text-sm"
-                    >
-                      <option value="">톤 선택 안 함</option>
-                      <option value="dark">다크</option>
-                      <option value="bright">밝음</option>
-                      <option value="warm">따뜻함</option>
-                    </select>
-
-                    <select
-                      value={aspectRatio}
-                      onChange={(e) => {
-                        setAspectRatio(e.target.value);
-                        onFieldChange('aspectRatio', e.target.value);
-                      }}
-                      className="rounded-lg border border-gray-200 p-2 text-sm"
-                    >
-                      <option value="">화면비 선택 안 함</option>
-                      <option value="16:9">16:9</option>
-                      <option value="1:1">1:1</option>
-                      <option value="9:16">9:16</option>
-                    </select>
-
-                    <select
-                      value={era}
-                      onChange={(e) => {
-                        setEra(e.target.value);
-                        onFieldChange('era', e.target.value);
-                      }}
-                      className="rounded-lg border border-gray-200 p-2 text-sm"
-                    >
-                      <option value="">시대 선택 안 함</option>
-                      <option value="modern">현대</option>
-                      <option value="past">과거</option>
-                      <option value="future">미래</option>
-                    </select>
+                {isAdvancedOpen && (
+                  <div className="mt-2">
+                    <div className="mb-1 text-xs font-medium text-gray-300">{imageModelField.label}</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {imageModelField.options.map((opt) => {
+                        const isSelected = selectedImageModel === opt.value;
+                        return (
+                          <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
+                            <input
+                              type="radio"
+                              name={imageModelField.id}
+                              value={opt.value}
+                              checked={isSelected}
+                              onChange={() => {
+                                setSelectedImageModel(opt.value);
+                                onFieldChange(imageModelField.id, opt.value);
+                              }}
+                              className="sr-only"
+                            />
+                            <div className="flex items-center gap-2">
+                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
+                              <span className="text-sm font-medium text-gray-100">{opt.label}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                )} */}
+                )}
               </div>
             )}
           </div>
@@ -268,35 +252,6 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
 
             <input ref={fileInputRef} type="file" accept={field.accept} multiple={(field.maxFiles ?? 1) > 1} onChange={handleFileChange} className="hidden" />
             <p className="mt-2 text-[11px] text-gray-500">이미지가 없어도 생성할 수 있어요! 텍스트만으로도 원하는 결과물을 만들어 드려요.</p>
-          </div>
-        )}
-
-        {/* 타입이 이미지 생성 모델 선택인 경우 */}
-        {field.type === 'modelSelect' && (
-          <div className="grid grid-cols-2 gap-2">
-            {field.options.map((opt) => {
-              const isSelected = selectedModel === opt.value;
-              return (
-                <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
-                  <input
-                    type="radio"
-                    name={field.id}
-                    value={opt.value}
-                    checked={isSelected}
-                    onChange={() => {
-                      setSelectedModel(opt.value);
-                      onFieldChange(field.id, opt.value);
-                    }}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
-                    <span className="text-sm font-medium text-gray-100">{opt.label}</span>
-                  </div>
-                  {opt.description && <span className="pl-6 text-xs text-gray-500">{opt.description}</span>}
-                </label>
-              );
-            })}
           </div>
         )}
       </div>
