@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, type ComponentType, type SVGProps } from 'react';
-import Image from 'next/image';
 import XIcon from '@/app/components/icons/x.svg';
-import logoMark from '@/app/components/icons/logo-mark.png';
 import PlusIcon from '@/app/components/icons/plus.svg';
 import ClapperboardIcon from '@/app/components/icons/clapperboard.svg';
 import ChevronDownIcon from '@/app/components/icons/chevron-down.svg';
@@ -90,8 +88,7 @@ export default function Library({ onClose }: LibraryProps) {
   const [selectedRecentItem, setSelectedRecentItem] = useState<{ section: string; label: string } | null>(null);
   return (
     <div className="bg-card scrollbar-none flex h-full w-101 flex-col overflow-y-auto rounded-r-xl">
-      <div className="flex w-full items-center justify-between p-8">
-        <Image src={logoMark} alt="GeNova" className="size-11" />
+      <div className="flex w-full items-center justify-end p-8">
         <button type="button" aria-label="닫기" onClick={onClose} className="text-text-secondary size-5 shrink-0 cursor-pointer">
           <XIcon className="size-5" />
         </button>
