@@ -19,7 +19,7 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
 
   // regenerationId로 상태를 반복 조회하다가, 완료되면 새 이미지 주소를 반환(내보내기 폴링과 동일한 패턴)
   const pollRegeneration = async (regenerationId: number, attempt = 0): Promise<string | null> => {
-    if (attempt > 60) {
+    if (attempt > 90) {
       throw new Error('재생성 시간이 너무 오래 걸립니다.');
     }
 
@@ -60,7 +60,7 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
     <div className="relative w-full h-full">
       {/* 이미지 표시 영역: 여기에만 overflow-hidden을 둬서, 아래 프롬프트 팝업이 셀 밖으로 나가도 안 잘리게 함 */}
       {/* 프롬프트 팝업이 열려있을 때는 이 컷의 이미지만 흐릿하고 어둡게 처리 */}
-      <div className={`absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 flex items-center justify-center transition-[filter] ${showPrompt && promptText ? 'blur-sm brightness-50' : ''}`}>
+      <div className={`absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 flex items-center justify-center transition-[filter] ${(showPrompt && promptText) || isRegenerating ? 'blur-sm brightness-50' : ''}`}>
         {currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}
       </div>
 
@@ -68,10 +68,20 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
 
       {/* 컷별 재생성 버튼 */}
       <button type="button" onClick={handleRegenerate} disabled={!promptText || !storyboardId || !cutId || isRegenerating} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-text-primary disabled:cursor-not-allowed disabled:opacity-40">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={isRegenerating ? 'animate-spin' : ''}>
-          <path d="M4 4v5h5M20 20v-5h-5M4.5 9a8 8 0 0 1 14-4.5M19.5 15a8 8 0 0 1-14 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width="12" height="12" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" className={isRegenerating ? 'animate-spin' : ''}>
+          <path
+            d="M9 1C10.5822 1 12.129 1.46919 13.4446 2.34824C14.7602 3.22729 15.7855 4.47672 16.391 5.93853C16.9965 7.40034 17.155 9.00887 16.8463 10.5607C16.5376 12.1126 15.7757 13.538 14.6569 14.6569C13.538 15.7757 12.1126 16.5376 10.5607 16.8463C9.00887 17.155 7.40034 16.9965 5.93853 16.391C4.47672 15.7855 3.22729 14.7602 2.34824 13.4446C1.46919 12.129 1 10.5822 1 9C1 6.76 1.88889 4.61778 3.43555 3.00889L5.44444 1M5.44444 5.44445V1L1 1"
+            stroke="currentColor"
+          />
         </svg>
       </button>
+
+      {/* 재생성 중일 때 셀 가운데에 로딩 스피너 표시 */}
+      {isRegenerating && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+        </div>
+      )}
 
       {/* 컷별 프롬프트 보기 버튼: 열려있을 땐 × 아이콘으로 바뀜 */}
       <button type="button" onClick={() => setShowPrompt((prev) => !prev)} disabled={!promptText} className="absolute right-9 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-text-primary disabled:cursor-not-allowed disabled:opacity-40">

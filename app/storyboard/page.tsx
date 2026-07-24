@@ -140,11 +140,19 @@ function StoryboardInner() {
     }
 
     const result = await getGeneration(generationId);
+    // 백엔드가 상태값을 소문자('completed'/'failed')로 내려주므로 대소문자 구분 없이 비교
+    const status = result.status.toLowerCase();
 
     // 서버가 준비되면 완성된 실제 데이터 전송
-    // 백엔드가 상태값을 소문자('completed')로 내려주므로 대소문자 구분 없이 비교
-    if (result.status.toLowerCase() === 'completed') {
+    if (status === 'completed') {
       setGeneration(result);
+      return;
+    }
+
+    // 일부(또는 전체) 컷이 실패해도 이미 완료된 컷은 있을 수 있으므로, 결과는 그대로 반영하고 알림만 띄움
+    if (status === 'failed') {
+      setGeneration(result);
+      alert('이미지 생성을 일부 실패하였습니다.');
       return;
     }
 
@@ -236,29 +244,37 @@ function StoryboardInner() {
   return (
     <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
-        <div className="min-w-100 w-1/4 shrink-0 flex flex-col gap-2 overflow-y-auto rounded-2xl p-4 text-text-primary">
-          <div>
-            <h2 className="text-base font-semibold">{viewedStoryboard ? (viewedStoryboard.title ?? `Storyboard ${viewedStoryboard.id}`) : 'AI Storyboard'}</h2>
-            <p className="mt-1 text-xs text-text-secondary">{viewedStoryboard ? '저장된 스토리보드입니다.' : '시나리오만 입력하면 9컷 스토리보드를 만들어드려요.'}</p>
+        <div className="min-w-100 w-1/4 shrink-0 relative flex flex-col rounded-2xl p-4 text-text-primary">
+          {/* 필드 영역만 자체적으로 스크롤됨. pb-16으로 버튼에 안 가리도록 아래 여백 확보 */}
+          <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto pb-16 pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
+            <div>
+              <h2 className="text-base font-semibold">{viewedStoryboard ? (viewedStoryboard.title ?? `Storyboard ${viewedStoryboard.id}`) : 'AI Storyboard'}</h2>
+              <p className="mt-1 text-xs text-text-secondary">{viewedStoryboard ? '저장된 스토리보드입니다.' : '시나리오만 입력하면 9컷 스토리보드를 만들어드려요.'}</p>
+            </div>
+            {viewedStoryboard ? (
+              <ReadStoryboard storyboard={viewedStoryboard} />
+            ) : (
+              <>
+                {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
+                {/* absolute + 부모 relative로 스크롤 영역과 완전히 분리, 항상 사이드바 하단에 떠 있음. z-50으로 항상 위에 보이도록 */}
+                <button
+                  className="absolute left-4 right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary shadow-lg disabled:opacity-60"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
+                  </svg>
+                  {isSubmitting ? '생성 중...' : '스토리보드 만들기'}
+                </button>
+                <div className="flex flex-col gap-2">
+                  {storyboardFields.map((field) => (
+                    <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-          {viewedStoryboard ? (
-            <ReadStoryboard storyboard={viewedStoryboard} />
-          ) : (
-            <>
-              <div className="flex flex-col gap-2">
-                {storyboardFields.map((field) => (
-                  <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
-                ))}
-              </div>
-              {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
-              <button className="mt-1 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary disabled:opacity-60" onClick={handleSubmit} disabled={isSubmitting}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
-                </svg>
-                {isSubmitting ? '생성 중...' : '스토리보드 만들기'}
-              </button>
-            </>
-          )}
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col">
