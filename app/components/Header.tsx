@@ -80,7 +80,7 @@ export default function Header({ isLoggedIn = false }: HeaderProps) {
       >
         <div className="h-full w-fit pr-3" onClick={(e) => e.stopPropagation()}>
           <div className={`h-full transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-            <Library onClose={() => setIsMenuOpen(false)} />
+            <Library isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
           </div>
         </div>
       </div>

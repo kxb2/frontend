@@ -1,15 +1,30 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import FormField from '@/app/components/FormField';
 import { storyboardFields } from '@/app/data/storyboardFields';
 import ImageGrid from '@/app/storyboard/image/imagegrid';
 import PromptBox from '@/app/storyboard/promptbox/propmptbox';
-import { createStoryboard, getGeneration, getIntegratedPrompt, exportPdf, exportImage, getExport } from '@/app/api/storyboard/api';
-import { GenerationResult } from '@/types/api';
+import ReadStoryboard from '@/app/storyboard/ReadStoryboard';
+import { createStoryboard, getGeneration, getIntegratedPrompt, exportPdf, exportImage, getExport, getStoryboard } from '@/app/api/storyboard/api';
+import { saveLastViewedStoryboardId } from '@/app/utils/lastSelected';
+import { GenerationResult, StoryboardDetailResult } from '@/types/api';
 
 // page.tsx
 export default function Storyboard() {
+  return (
+    <Suspense fallback={<div className="flex h-screen flex-col bg-background text-text-primary" />}>
+      <StoryboardInner />
+    </Suspense>
+  );
+}
+
+// useSearchParams()를 쓰려면 Suspense 경계 안에 있어야 해서 실제 내용은 이 안에 분리
+function StoryboardInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   // 필드 id 별로 값을 모아두는 state(ex: {scenario: '...', genre: 'ROMANCE', reference: [File, File]})
   const [formValues, setFormValues] = useState<Record<string, string | File[]>>({});
 
@@ -28,6 +43,69 @@ export default function Storyboard() {
   const [isExporting, setIsExporting] = useState(false);
   // 드롭다운 바깥을 클릭하면 닫기 위한 영역 참조
   const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // 라이브러리에서 선택해 들어온, 왼쪽 패널을 읽기 전용으로 보여줄 기존 스토리보드 (저장된 입력값, 우측 9컷/프롬프트/내보내기는 storyboardId/generation/integratedPrompt를 그대로 공유)
+  const [viewedStoryboard, setViewedStoryboard] = useState<StoryboardDetailResult | null>(null);
+  const [viewedId, setViewedId] = useState<number | null>(null);
+  const [viewError, setViewError] = useState(false);
+
+  // 라이브러리 등에서 ?id=로 들어오면 그 스토리보드를 보기, ?new=로 들어오면(같은 페이지 안에서도) 완전히 빈 화면으로 리셋
+  useEffect(() => {
+    const idFromQuery = searchParams.get('id');
+    if (idFromQuery) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 쿼리 파라미터가 바뀔 때만 반응하는 의도적인 리셋
+      setViewedId(Number(idFromQuery));
+      router.replace('/storyboard');
+      return;
+    }
+    if (searchParams.has('new')) {
+      setViewedId(null);
+      setViewedStoryboard(null);
+      setViewError(false);
+      setFormValues({});
+      setStoryboardId(null);
+      setGeneration(null);
+      setIntegratedPrompt(null);
+      router.replace('/storyboard');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router는 고정이라 deps에 넣지 않음
+  }, [searchParams]);
+
+  // viewedId가 정해지면 그 스토리보드의 저장된 입력값 + 9컷 결과 + 통합 프롬프트를 조회, 라이브러리가 selected UI에 쓸 수 있도록 기록
+  useEffect(() => {
+    saveLastViewedStoryboardId(viewedId !== null ? String(viewedId) : null);
+    if (viewedId === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- viewedId가 바뀔 때만 반응하는 의도적인 리셋
+      setViewedStoryboard(null);
+      return;
+    }
+    let cancelled = false;
+    setViewError(false);
+    (async () => {
+      try {
+        const detail = await getStoryboard(viewedId);
+        if (cancelled) return;
+        setViewedStoryboard(detail);
+        setStoryboardId(detail.id);
+        setGeneration(detail.generation ? { ...detail.generation, storyboardId: detail.id } : null);
+      } catch (error) {
+        if (cancelled) return;
+        console.error(error);
+        setViewError(true);
+        return;
+      }
+      // 통합 프롬프트는 별도 엔드포인트라 실패해도 나머지 화면은 그대로 보여줌
+      try {
+        const promptResult = await getIntegratedPrompt(viewedId);
+        if (!cancelled) setIntegratedPrompt(promptResult.integratedPrompt);
+      } catch (error) {
+        console.error(error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [viewedId]);
 
   // 드롭다운이 열려있을 때 바깥 영역 클릭 시 닫기
   useEffect(() => {
@@ -155,6 +233,14 @@ export default function Storyboard() {
     }
   };
 
+  if (viewError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-background text-text-primary">
+        <p className="text-text-secondary">스토리보드를 불러오지 못했습니다.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
@@ -162,26 +248,32 @@ export default function Storyboard() {
           {/* 필드 영역만 자체적으로 스크롤됨. pb-16으로 버튼에 안 가리도록 아래 여백 확보 */}
           <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto pb-16 pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
             <div>
-              <h2 className="text-base font-semibold">AI Storyboard</h2>
-              <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
+              <h2 className="text-base font-semibold">{viewedStoryboard ? (viewedStoryboard.title ?? `Storyboard ${viewedStoryboard.id}`) : 'AI Storyboard'}</h2>
+              <p className="mt-1 text-xs text-text-secondary">{viewedStoryboard ? '저장된 스토리보드입니다.' : '시나리오만 입력하면 9컷 스토리보드를 만들어드려요.'}</p>
             </div>
-            {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
-            {/* absolute + 부모 relative로 스크롤 영역과 완전히 분리, 항상 사이드바 하단에 떠 있음. z-50으로 항상 위에 보이도록 */}
-            <button
-              className="absolute left-4 right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary shadow-lg disabled:opacity-60"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
-              </svg>
-              {isSubmitting ? '생성 중...' : '스토리보드 만들기'}
-            </button>
-            <div className="flex flex-col gap-2">
-              {storyboardFields.map((field) => (
-                <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
-              ))}
-            </div>
+            {viewedStoryboard ? (
+              <ReadStoryboard storyboard={viewedStoryboard} />
+            ) : (
+              <>
+                {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
+                {/* absolute + 부모 relative로 스크롤 영역과 완전히 분리, 항상 사이드바 하단에 떠 있음. z-50으로 항상 위에 보이도록 */}
+                <button
+                  className="absolute left-4 right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary shadow-lg disabled:opacity-60"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
+                  </svg>
+                  {isSubmitting ? '생성 중...' : '스토리보드 만들기'}
+                </button>
+                <div className="flex flex-col gap-2">
+                  {storyboardFields.map((field) => (
+                    <FormField key={field.id} field={field} onFieldChange={handleFieldChange} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -194,7 +286,7 @@ export default function Storyboard() {
                 <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
                 <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
               </svg>
-              My Storyboard
+              {viewedStoryboard?.title ?? 'My Storyboard'}
             </div>
             <div className="relative flex gap-2" ref={exportMenuRef}>
               <button type="button" onClick={() => setShowExportMenu((prev) => !prev)} disabled={!storyboardId || isExporting} className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary disabled:cursor-not-allowed disabled:opacity-40">
