@@ -175,7 +175,7 @@ export default function Storyboard() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
               </svg>
-              {isSubmitting ? '생성 중...' : '스토리보드 만들기'}
+              {isSubmitting ? '생성 중...' : generation && integratedPrompt ? '스토리보드 재생성하기' : '스토리보드 만들기'}
             </button>
             <div className="flex flex-col gap-2">
               {storyboardFields.map((field) => (
