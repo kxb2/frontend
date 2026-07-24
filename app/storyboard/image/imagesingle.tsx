@@ -8,7 +8,7 @@ export default function ImageSingle({ imageUrl, isLoading }: ImageSingleProps) {
       {isLoading && !imageUrl ? (
         // 생성 중이고 아직 그리드 이미지가 없으면 스켈레톤 표시
         <div className="absolute inset-0">
-          <Skeleton height="100%" width="100%" borderRadius={12} baseColor="#52525b" highlightColor="#ffffff1a" duration={2.5} className="block!" containerClassName="block! h-full w-full" />
+          <Skeleton height="100%" width="100%" borderRadius={12} baseColor="#3a3c41" highlightColor="#ffffff1a" duration={2.5} className="block!" containerClassName="block! h-full w-full" />
         </div>
       ) : imageUrl ? (
         <img src={imageUrl} alt="9컷 스토리보드" className="w-full h-full object-contain" />
