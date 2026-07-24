@@ -8,6 +8,7 @@ import { computeMemoTotalHeight } from '@/app/canvas/_components/tools/memo/layo
 import { rotateAround } from '@/app/canvas/_components/core/utils';
 import { saveCanvas, uploadCanvasAttachment } from '@/app/api/canvas/api';
 import { toSaveRequest } from '@/app/api/canvas/adapter';
+import { saveLastSavedAt } from '@/app/utils/savedAt';
 import type { CanvasDocument, CanvasItem, MemoColor, MemoViewMode, SelectionBox } from '@/types/canvas';
 
 let nextId = 0;
@@ -275,6 +276,9 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 한 번만 예약하면 됨
   }, []);
 
+  // 디바운스 대기 중인, 아직 서버에 저장 안 된 최신 문서 (캔버스 전환/페이지 이탈 시 유실 방지용 flush 대상)
+  const pendingDocRef = useRef<CanvasDocument | null>(null);
+
   // 문서가 바뀔 때마다 (1) 디바운스 후 백엔드에 저장 (2) 썸네일 갱신(클라이언트에서만 캡처)
   const initialDocRef = useRef(initialDoc);
   useEffect(() => {
@@ -283,11 +287,16 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
 
     // 업로드 중(blob: 미리보기)이면 저장 보류
     const hasPendingUpload = doc.items.some((item) => (item.type === 'image' || item.type === 'video') && item.src.startsWith('blob:'));
+    pendingDocRef.current = hasPendingUpload ? null : doc;
     const saveTimeout = hasPendingUpload
       ? undefined
       : setTimeout(() => {
+          pendingDocRef.current = null;
           saveCanvas(canvasId, toSaveRequest(doc))
-            .then(() => onSaveStateChange('saved'))
+            .then(() => {
+              saveLastSavedAt(String(canvasId), new Date().toISOString()); // 백엔드 updatedAt이 저장해도 안 바뀌어서 직접 기록
+              onSaveStateChange('saved');
+            })
             .catch(() => onSaveStateChange('error'));
         }, SAVE_DEBOUNCE_MS);
 
@@ -301,6 +310,18 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onSaveStateChange/onThumbnailChange는 상위 렌더마다 새로 생성되므로 deps에 넣지 않음
   }, [doc]);
+
+  // 캔버스 전환/페이지 이탈로 이 컴포넌트가 사라질 때, 디바운스 대기 중이라 아직 못 보낸 마지막 편집을 즉시 저장
+  useEffect(() => {
+    return () => {
+      if (pendingDocRef.current) {
+        saveCanvas(canvasId, toSaveRequest(pendingDocRef.current))
+          .then(() => saveLastSavedAt(String(canvasId), new Date().toISOString()))
+          .catch((error) => console.error('나가기 전 마지막 저장 실패:', error));
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- canvasId는 이 컴포넌트 수명 동안 고정(캔버스 전환 시 key로 새로 마운트), 언마운트 시 한 번만 실행
+  }, []);
 
   return (
     <>

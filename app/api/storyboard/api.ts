@@ -1,5 +1,5 @@
 // 타입 가져오기
-import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult, ExportRequestResult, ExportStatusResult, RegenerationRequestResult, RegenerationStatusResult } from '@/types/api';
+import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult, ExportRequestResult, ExportStatusResult, RegenerationRequestResult, RegenerationStatusResult, StoryboardListItem, StoryboardDetailResult } from '@/types/api';
 
 // 실제 백엔드 서버 주소. .env.local의 NEXT_PUBLIC_API_URL을 읽고, 없으면 로컬 기본값 사용
 // (브라우저에서 실행되는 코드라 NEXT_PUBLIC_ 접두사가 붙은 환경변수만 접근 가능)
@@ -36,6 +36,29 @@ export async function createStoryboard(formValues: Record<string, string | File[
   // 응답 실패시 에러 던지기
   if (!response.ok) {
     throw new Error('스토리보드 생성 요청에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 스토리보드 목록 조회 (GET {API_BASE_URL}/storyboards)
+export async function listStoryboards(limit?: number): Promise<StoryboardListItem[]> {
+  const query = limit !== undefined ? `?limit=${limit}` : '';
+  const response = await fetch(`${API_BASE_URL}/storyboards${query}`);
+
+  if (!response.ok) {
+    throw new Error('스토리보드 목록 조회에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 스토리보드 상세 조회 (GET {API_BASE_URL}/storyboards/{storyboardId}) -- 9컷 결과는 포함되지 않음
+export async function getStoryboard(storyboardId: number): Promise<StoryboardDetailResult> {
+  const response = await fetch(`${API_BASE_URL}/storyboards/${storyboardId}`);
+
+  if (!response.ok) {
+    throw new Error('스토리보드 조회에 실패했습니다.');
   }
 
   return response.json();

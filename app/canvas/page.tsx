@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Switcher from '@/app/canvas/_components/core/Switcher';
 import Workspace, { type SaveState } from '@/app/canvas/_components/core/Workspace';
 import { createCanvas, getCanvas, listCanvases } from '@/app/api/canvas/api';
 import { fromDetailResponse } from '@/app/api/canvas/adapter';
+import { formatRelativeTime } from '@/app/utils/time';
+import { loadLastSavedAt } from '@/app/utils/savedAt';
+import { loadLastActiveCanvasId, saveLastActiveCanvasId } from '@/app/utils/lastSelected';
 import type { CanvasDocument, CanvasEntry } from '@/types/canvas';
 
 const EMPTY_DOC: CanvasDocument = { items: [], connectors: [] };
@@ -17,7 +21,6 @@ const SAVE_STATE_LABEL: Record<SaveState, string> = {
 
 // localStorage에 캐싱
 const THUMBNAIL_STORAGE_PREFIX = 'kxb2-canvas-thumbnail-';
-const LAST_ACTIVE_STORAGE_KEY = 'kxb2-canvas-last-active-id';
 
 function safeLocalStorageGet(key: string): string | null {
   try {
@@ -41,34 +44,40 @@ function loadCachedThumbnail(id: string): string | undefined {
 function saveCachedThumbnail(id: string, thumbnail: string) {
   safeLocalStorageSet(THUMBNAIL_STORAGE_PREFIX + id, thumbnail);
 }
-function loadLastActiveId(): string | null {
-  return safeLocalStorageGet(LAST_ACTIVE_STORAGE_KEY);
-}
-function saveLastActiveId(id: string) {
-  safeLocalStorageSet(LAST_ACTIVE_STORAGE_KEY, id);
-}
-
-// updatedAt(ISO 문자열)을 "n분 전" 같은 상대 시간으로 표시
-function formatRelativeTime(iso: string): string {
-  const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (diffMin < 1) return '방금 전';
-  if (diffMin < 60) return `${diffMin}분 전`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}시간 전`;
-  return `${Math.floor(diffHour / 24)}일 전`;
-}
+const loadLastActiveId = loadLastActiveCanvasId;
+const saveLastActiveId = saveLastActiveCanvasId;
 
 export default function CanvasPage() {
+  return (
+    <Suspense fallback={<main className="relative flex-1 min-h-0" />}>
+      <CanvasPageInner />
+    </Suspense>
+  );
+}
+
+// useSearchParams()를 쓰려면 Suspense 경계 안에 있어야 해서 실제 내용은 이 안에 분리
+function CanvasPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [canvases, setCanvases] = useState<CanvasEntry[] | null>(null); // null이면 목록 로딩 중
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loadedDocs, setLoadedDocs] = useState<Record<string, CanvasDocument>>({}); // 활성화된 적 있는 캔버스만 문서를 지연 로드해서 캐싱
 
+  // 캔버스 목록을 조회해 CanvasEntry[]로 변환 (생성순 정렬 + 로컬에 기록된 저장 시각 우선 사용)
+  async function refreshCanvasList() {
+    const list = await listCanvases();
+    const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const entries = sorted.map((item) => ({ id: String(item.id), name: item.title ?? `Canvas ${item.id}`, state: '저장됨', time: formatRelativeTime(loadLastSavedAt(String(item.id)) ?? item.updatedAt), thumbnail: loadCachedThumbnail(String(item.id)) }));
+    setCanvases(entries);
+    return { list, entries };
+  }
+
   // 최초 로드: 캔버스 목록 조회, 하나도 없으면 새로 생성해서 시드
   useEffect(() => {
     (async () => {
       try {
-        const list = await listCanvases();
+        const { list } = await refreshCanvasList();
         if (list.length === 0) {
           const created = await createCanvas();
           const id = String(created.canvasId);
@@ -78,12 +87,11 @@ export default function CanvasPage() {
           saveLastActiveId(id);
           return;
         }
-        const sorted = [...list].sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
-        setCanvases(sorted.map((item) => ({ id: String(item.id), name: item.title ?? `Canvas ${item.id}`, state: '저장됨', time: formatRelativeTime(item.updatedAt), thumbnail: loadCachedThumbnail(String(item.id)) })));
-        // 새로고침 전 마지막으로 보고 있던 캔버스가 있으면 그걸 우선 사용 (없거나 삭제됐으면 가장 최근에 저장된 캔버스로 대체)
+        // 마지막으로 보던 캔버스가 있으면 그걸 우선 사용, 없으면 가장 최근에 수정된 캔버스
         const lastActiveId = loadLastActiveId();
-        const fallbackId = String(sorted[sorted.length - 1].id);
-        const initialActiveId = lastActiveId && sorted.some((item) => String(item.id) === lastActiveId) ? lastActiveId : fallbackId;
+        const mostRecentlyUpdated = [...list].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+        const fallbackId = String(mostRecentlyUpdated.id);
+        const initialActiveId = lastActiveId && list.some((item) => String(item.id) === lastActiveId) ? lastActiveId : fallbackId;
         setActiveId(initialActiveId);
         saveLastActiveId(initialActiveId);
       } catch (error) {
@@ -92,6 +100,28 @@ export default function CanvasPage() {
       }
     })();
   }, []);
+
+  // 라이브러리 등에서 ?id=로 특정 캔버스를 지정해 들어온 경우 그 캔버스로 전환 (쿼리만 바뀌는 경우는 리마운트가 안 되므로 별도로 반응해야 함)
+  useEffect(() => {
+    if (!canvases) return;
+    const idFromQuery = searchParams.get('id');
+    if (!idFromQuery) return;
+    (async () => {
+      if (canvases.some((canvas) => canvas.id === idFromQuery)) {
+        selectActiveId(idFromQuery);
+      } else {
+        // 라이브러리에서 방금 새로 만든 캔버스처럼, 이 페이지가 가진 목록엔 아직 없을 수 있으니 한 번 더 조회
+        try {
+          const { entries } = await refreshCanvasList();
+          if (entries.some((entry) => entry.id === idFromQuery)) selectActiveId(idFromQuery);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      router.replace('/canvas');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshCanvasList/selectActiveId/router는 매 렌더 새로 만들어지거나 고정
+  }, [canvases, searchParams]);
 
   // 활성 캔버스가 바뀔 때마다 최신 문서를 불러옴
   useEffect(() => {
@@ -129,6 +159,8 @@ export default function CanvasPage() {
 
   // 캔버스 전환: 캐시된 문서를 지워서 위 effect가 최신 상태를 다시 불러오게 하고, 마지막으로 보던 캔버스로 기억해둠
   function selectActiveId(id: string) {
+    // 이미 활성 상태면 아무것도 안 함, activeId가 그대로일 시 캐시만 지우면 빈 화면이 됨
+    if (id === activeId) return;
     setLoadedDocs((prev) => {
       if (!(id in prev)) return prev;
       const next = { ...prev };

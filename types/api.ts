@@ -24,6 +24,46 @@ export interface GenerationResult {
   cuts: Cut[]; // 9개 컷 데이터 배열
 }
 
+// 스토리보드 목록 항목 형태 (GET /storyboards)
+export interface StoryboardListItem {
+  id: number; // 스토리보드 id
+  title: string | null; // 제목(없으면 null)
+  genre: string; // 장르
+  status: string | null; // 최신 생성 작업 상태(없으면 null)
+  createdAt: string; // 생성 시각
+  updatedAt: string; // 수정 시각
+}
+
+// 레퍼런스 이미지 하나
+export interface ReferenceImage {
+  id: number;
+  imageUrl: string;
+}
+
+// 스토리보드 상세 조회 응답에 포함된 9컷 생성 결과 요약 (storyboardId는 이미 상위 응답에 있어 생략됨)
+export interface GenerationSummary {
+  id: number; // 생성 작업 id
+  status: string; // 생성 작업 전체 상태
+  gridImageUrl: string | null; // 9컷을 합친 그리드 이미지 주소(없으면 null)
+  cuts: Cut[]; // 9개 컷 데이터 배열
+}
+
+// 스토리보드 상세 조회 응답 형태 (GET /storyboards/{storyboardId})
+export interface StoryboardDetailResult {
+  id: number;
+  title: string | null;
+  scenarioText: string;
+  genre: string;
+  style: string | null;
+  tone: string | null;
+  aspectRatio: string | null;
+  era: string | null;
+  imageModel: string;
+  referenceImages: ReferenceImage[];
+  generation: GenerationSummary | null; // 아직 생성이 안 됐거나 실패했으면 null
+  createdAt: string;
+}
+
 // 통합 프롬프트 조회 응답 형태 (GET /storyboards/{storyboardId}/prompt)
 export interface IntegratedPromptResult {
   storyboardId: number; // 스토리보드 id
