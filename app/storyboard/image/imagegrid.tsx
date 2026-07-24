@@ -1,7 +1,7 @@
 import ImageCell from '@/app/storyboard/image/imagecell';
 import { ImageGridProps } from '@/types/storyboard';
 
-export default function ImageGrid({ cuts = [], storyboardId }: ImageGridProps) {
+export default function ImageGrid({ cuts = [], storyboardId, isLoading }: ImageGridProps) {
   const cellCount = 9;
   /*
   Array.from: 배열을 만들어내는 함수(length는 배열의 길이)
@@ -14,7 +14,7 @@ export default function ImageGrid({ cuts = [], storyboardId }: ImageGridProps) {
   return (
     <div className="grid grid-cols-3 grid-rows-3 gap-3 flex-1 min-w-125 min-h-125">
       {cellIndexes.map((cellIndex) => (
-        <ImageCell key={cellIndex} shotNumber={cellIndex + 1} cutId={cuts[cellIndex]?.id} storyboardId={storyboardId} imageUrl={cuts[cellIndex]?.imageUrl} promptText={cuts[cellIndex]?.promptText} />
+        <ImageCell key={cellIndex} shotNumber={cellIndex + 1} cutId={cuts[cellIndex]?.id} storyboardId={storyboardId} imageUrl={cuts[cellIndex]?.imageUrl} promptText={cuts[cellIndex]?.promptText} isLoading={isLoading} />
       ))}
     </div>
   );

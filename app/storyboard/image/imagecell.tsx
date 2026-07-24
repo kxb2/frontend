@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { regenerateCut, getRegeneration } from '@/app/api/storyboard/api';
 import { ImageCellProps } from '@/types/storyboard';
 
-export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, promptText }: ImageCellProps) {
+export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, promptText, isLoading }: ImageCellProps) {
   // 이 컷의 프롬프트 팝업을 띄울지 여부
   const [showPrompt, setShowPrompt] = useState(false);
   // 실제로 화면에 보여줄 이미지 주소(재생성 성공 시 이 값만 갱신함)
@@ -60,9 +60,14 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
     <div className="relative w-full h-full">
       {/* 이미지 표시 영역: 여기에만 overflow-hidden을 둬서, 아래 프롬프트 팝업이 셀 밖으로 나가도 안 잘리게 함 */}
       {/* 프롬프트 팝업이 열려있을 때는 이 컷의 이미지만 흐릿하고 어둡게 처리 */}
-      <div className={`absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 flex items-center justify-center transition-[filter] ${(showPrompt && promptText) || isRegenerating ? 'blur-sm brightness-50' : ''}`}>
-        {currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}
-      </div>
+      {isLoading && !currentImageUrl ? (
+        // 생성 중이고 아직 이 컷의 이미지가 없으면 스켈레톤 표시
+        <div className="absolute inset-0 animate-pulse rounded-xl border border-border bg-neutral-700/40" />
+      ) : (
+        <div className={`absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 flex items-center justify-center transition-[filter] ${(showPrompt && promptText) || isRegenerating ? 'blur-sm brightness-50' : ''}`}>
+          {currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}
+        </div>
+      )}
 
       <span className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl bg-background text-[14px] font-semibold text-primary-variant">{String(shotNumber).padStart(2, '0')}</span>
 
