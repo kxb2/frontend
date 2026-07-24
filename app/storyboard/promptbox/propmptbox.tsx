@@ -2,6 +2,7 @@
 
 import { PromptBoxProps } from '@/types/storyboard';
 import { useState } from 'react';
+import Skeleton from 'react-loading-skeleton';
 
 export default function PromptBox({ promptText, isLoading }: PromptBoxProps) {
   // "더보기" 펼침 여부
@@ -47,10 +48,8 @@ export default function PromptBox({ promptText, isLoading }: PromptBoxProps) {
 
       {isLoading ? (
         // 생성 중일 때는 폭이 다른 회색 막대 3줄로 스켈레톤 표시
-        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
-          <div className="h-3 w-full animate-pulse rounded bg-neutral-700/40" />
-          <div className="h-3 w-5/6 animate-pulse rounded bg-neutral-700/40" />
-          <div className="h-3 w-2/3 animate-pulse rounded bg-neutral-700/40" />
+        <div className="mt-3 rounded-lg border border-border bg-surface p-3">
+          <Skeleton count={3} width="90%" baseColor="#3f3f46" highlightColor="#52525b" />
         </div>
       ) : (
         <div className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${isExpanded ? '' : 'line-clamp-3'}`}>{promptText ?? '프롬프트'}</div>

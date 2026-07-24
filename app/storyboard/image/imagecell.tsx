@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Skeleton from 'react-loading-skeleton';
 import { regenerateCut, getRegeneration } from '@/app/api/storyboard/api';
 import { ImageCellProps } from '@/types/storyboard';
 
@@ -62,10 +63,15 @@ export default function ImageCell({ shotNumber, cutId, storyboardId, imageUrl, p
       {/* 프롬프트 팝업이 열려있을 때는 이 컷의 이미지만 흐릿하고 어둡게 처리 */}
       {isLoading && !currentImageUrl ? (
         // 생성 중이고 아직 이 컷의 이미지가 없으면 스켈레톤 표시
-        <div className="absolute inset-0 animate-pulse rounded-xl border border-border bg-neutral-700/40" />
+        <div className="absolute inset-0">
+          <Skeleton height="100%" borderRadius={12} baseColor="#3f3f46" highlightColor="#52525b" />
+        </div>
       ) : (
-        <div className={`absolute inset-0 overflow-hidden rounded-xl border border-border bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 flex items-center justify-center transition-[filter] ${(showPrompt && promptText) || isRegenerating ? 'blur-sm brightness-50' : ''}`}>
-          {currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}
+        // 테두리는 바깥 div에 고정, 블러/어둡게 처리는 안쪽 div에만 적용(블러가 테두리까지 뭉개는 것 방지)
+        <div className="absolute inset-0 overflow-hidden rounded-xl border border-border">
+          <div className={`w-full h-full flex items-center justify-center bg-linear-to-b from-[#ffffff]/10 to-[#232334]/20 transition-[filter] ${(showPrompt && promptText) || isRegenerating ? 'blur-sm brightness-50' : ''}`}>
+            {currentImageUrl ? <img src={currentImageUrl} alt={`컷 ${shotNumber}`} className="w-full h-full object-cover" /> : <></>}
+          </div>
         </div>
       )}
 

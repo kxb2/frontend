@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import Header from "@/app/components/Header";
+import "react-loading-skeleton/dist/skeleton.css";
 import "./globals.css";
 
 // 영문(Inter)
