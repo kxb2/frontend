@@ -1,21 +1,11 @@
 import { useRef, useState } from 'react';
 import type Konva from 'konva';
 import type { MemoCanvasItem } from '@/types/canvas';
-import { MEMO_WIDTH, getMemoContentWidth, measureMemo } from '@/app/canvas/_components/tools/memo/memoLayout';
-import { trackWindowGesture } from '@/app/canvas/_components/canvasUtils';
+import { MEMO_WIDTH, getMemoContentWidth, measureMemo } from '@/app/canvas/_components/tools/memo/layout';
+import { trackWindowGesture } from '@/app/canvas/_components/core/utils';
+import { horizontalPartOf, verticalPartOf, type ResizeHandle } from '@/app/canvas/_components/transform/math';
 
-export type MemoResizeHandle = 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-
-function horizontalPartOf(handle: MemoResizeHandle): 'left' | 'right' | null {
-  if (handle === 'left' || handle === 'top-left' || handle === 'bottom-left') return 'left';
-  if (handle === 'right' || handle === 'top-right' || handle === 'bottom-right') return 'right';
-  return null;
-}
-function verticalPartOf(handle: MemoResizeHandle): 'top' | 'bottom' | null {
-  if (handle === 'top' || handle === 'top-left' || handle === 'top-right') return 'top';
-  if (handle === 'bottom' || handle === 'bottom-left' || handle === 'bottom-right') return 'bottom';
-  return null;
-}
+export type MemoResizeHandle = ResizeHandle;
 
 export interface MemoLiveResize {
   id: string;
@@ -30,7 +20,6 @@ interface UpdatePatch {
   x: number;
   y: number;
   rotate: number;
-  scale: number;
   width?: number;
   height?: number;
 }
@@ -87,7 +76,7 @@ export function useMemoResize({ screenToLogical, onUpdateItems }: UseMemoResizeP
         latestRef.current = null;
         setLiveResize(null);
         if (current && current.id === item.id) {
-          onUpdateItems([{ id: item.id, x: current.x, y: current.y, rotate: item.rotate, scale: item.scale, width: current.width, height: current.height }]);
+          onUpdateItems([{ id: item.id, x: current.x, y: current.y, rotate: item.rotate, width: current.width, height: current.height }]);
         }
       },
     );

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type Konva from 'konva';
 import type { CanvasItem } from '@/types/canvas';
-import { MEMO_CONTENT_FONT_SIZE } from '@/app/canvas/_components/tools/memo/memoLayout';
-import type { Tool } from '@/app/canvas/_components/toolbar';
+import { MEMO_CONTENT_FONT_SIZE } from '@/app/canvas/_components/tools/memo/layout';
+import type { Tool } from '@/app/canvas/_components/core/Toolbar';
 
 export interface OverlayRect {
   left: number;
@@ -13,7 +13,7 @@ export interface OverlayRect {
   fontSize: number;
 }
 
-interface UseMemoEditingParams {
+interface UseMemoEditParams {
   items: CanvasItem[];
   scale: number;
   stagePos: { x: number; y: number };
@@ -26,7 +26,7 @@ interface UseMemoEditingParams {
 }
 
 // 메모 인라인 편집용 HTML textarea 및 빈 캔버스 메모 배치
-export function useMemoEditing({ items, scale, stagePos, stageRef, screenToLogical, onAddMemoItem, onEditItemText, onToolChange, onFinishSelect }: UseMemoEditingParams) {
+export function useMemoEdit({ items, scale, stagePos, stageRef, screenToLogical, onAddMemoItem, onEditItemText, onToolChange, onFinishSelect }: UseMemoEditParams) {
   const editableNodeMapRef = useRef(new Map<string, Konva.Node>());
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [overlayRect, setOverlayRect] = useState<OverlayRect | null>(null);

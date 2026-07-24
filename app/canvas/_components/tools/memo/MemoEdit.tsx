@@ -1,8 +1,8 @@
-import { MEMO_LINE_HEIGHT, MEMO_MAX_CHARS } from '@/app/canvas/_components/tools/memo/memoLayout';
-import type { OverlayRect } from '@/app/canvas/_components/tools/memo/useMemoEditing';
+import { MEMO_LINE_HEIGHT, MEMO_MAX_CHARS } from '@/app/canvas/_components/tools/memo/layout';
+import type { OverlayRect } from '@/app/canvas/_components/tools/memo/useMemoEdit';
 import type { CanvasItem } from '@/types/canvas';
 
-interface MemoEditOverlayProps {
+interface MemoEditProps {
   editingItem: CanvasItem | undefined;
   editingItemId: string;
   overlayRect: OverlayRect;
@@ -11,7 +11,7 @@ interface MemoEditOverlayProps {
 }
 
 // 메모 본문 인라인 편집용 HTML textarea
-export default function MemoEditOverlay({ editingItem, editingItemId, overlayRect, onFinishEditing, onChangeText }: MemoEditOverlayProps) {
+export default function MemoEdit({ editingItem, editingItemId, overlayRect, onFinishEditing, onChangeText }: MemoEditProps) {
   if (!editingItem || editingItem.type !== 'memo') return null;
   return (
     <textarea

@@ -1,5 +1,3 @@
-import Konva from 'konva';
-
 // 드래그/회전/스케일 중 페이지 전체 텍스트가 함께 드래그 선택되는 것을 방지
 function disableTextSelect() {
   document.body.style.userSelect = 'none';
@@ -33,27 +31,4 @@ export function rotateAround(px: number, py: number, cx: number, cy: number, ang
     x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
     y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
   };
-}
-
-// 주어진 naturalWidth/naturalHeight를 cap (240px) 이하로 맞춤
-export function fitWithinCap(naturalWidth: number, naturalHeight: number, cap = 240) {
-  if (naturalWidth <= cap && naturalHeight <= cap) return { width: naturalWidth, height: naturalHeight };
-  const ratio = Math.min(cap / naturalWidth, cap / naturalHeight);
-  return { width: naturalWidth * ratio, height: naturalHeight * ratio };
-}
-
-// 주어진 텍스트를 Konva.Text로 렌더링했을 때의 width/height를 측정
-export function measureText(text: string, fontSize: number, fontFamily: string, padding = 8, width?: number, lineHeight = 1.2) {
-  const node = new Konva.Text({
-    text: text || ' ',
-    fontSize,
-    fontFamily,
-    padding,
-    lineHeight,
-    ...(width ? { width, wrap: 'word' as const } : {}),
-  });
-  const measuredWidth = width ?? Math.max(node.width(), fontSize * 2);
-  const height = Math.max(node.height(), fontSize + padding * 2);
-  node.destroy();
-  return { width: measuredWidth, height };
 }

@@ -1,5 +1,21 @@
+import Konva from 'konva';
 import type { MemoCanvasItem, MemoColor, MemoViewMode } from '@/types/canvas';
-import { measureText } from '@/app/canvas/_components/canvasUtils';
+
+// 주어진 텍스트를 Konva.Text로 렌더링했을 때의 width/height를 측정
+function measureText(text: string, fontSize: number, fontFamily: string, padding = 8, width?: number, lineHeight = 1.2) {
+  const node = new Konva.Text({
+    text: text || ' ',
+    fontSize,
+    fontFamily,
+    padding,
+    lineHeight,
+    ...(width ? { width, wrap: 'word' as const } : {}),
+  });
+  const measuredWidth = width ?? Math.max(node.width(), fontSize * 2);
+  const height = Math.max(node.height(), fontSize + padding * 2);
+  node.destroy();
+  return { width: measuredWidth, height };
+}
 
 // 메모 레이아웃
 export const MEMO_WIDTH = 242;
@@ -63,10 +79,9 @@ export function computeMemoTotalHeight(item: MemoCanvasItem, viewMode: MemoViewM
   return MEMO_HEADER_HEIGHT + bodyHeight;
 }
 
-// Konva Transformer의 스케일 결과를 반영 (메모 전용 scale 계산)
-export function computeMemoScalePatch(item: MemoCanvasItem, sx: number, sy: number) {
-  const naturalHeight = measureMemo(item.text, getMemoContentWidth(item.width ?? MEMO_WIDTH));
+// 가로만 배율(sx) 적용, 세로는 그 가로에서 텍스트가 자연스럽게 줄바꿈된 높이로 재계산 (메모는 항상 내용 기준 높이)
+export function computeMemoScalePatch(item: MemoCanvasItem, sx: number) {
   const width = Math.max(160, (item.width ?? MEMO_WIDTH) * sx);
-  const height = Math.max(20, (item.height ?? naturalHeight) * sy);
+  const height = Math.max(20, measureMemo(item.text, getMemoContentWidth(width)));
   return { width, height };
 }

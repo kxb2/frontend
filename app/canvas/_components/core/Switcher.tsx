@@ -6,14 +6,14 @@ import ChevronDownIcon from '@/app/components/icons/chevron-down.svg';
 import PlusIcon from '@/app/components/icons/plus.svg';
 import type { CanvasEntry } from '@/types/canvas';
 
-interface CanvasSwitcherProps {
+interface SwitcherProps {
   canvases: CanvasEntry[];
   selectedId: string;
   onSelect: (id: string) => void;
   onAdd: () => void;
 }
 
-export default function CanvasSwitcher({ canvases, selectedId, onSelect, onAdd }: CanvasSwitcherProps) {
+export default function Switcher({ canvases, selectedId, onSelect, onAdd }: SwitcherProps) {
   const [open, setOpen] = useState(false);
   const selected = canvases.find((canvas) => canvas.id === selectedId) ?? canvases[0];
   const rootRef = useRef<HTMLDivElement>(null);
@@ -37,22 +37,22 @@ export default function CanvasSwitcher({ canvases, selectedId, onSelect, onAdd }
   return (
     <div
       ref={rootRef}
-      className="absolute left-5 top-5 z-20 flex flex-col items-start gap-3"
+      className="absolute left-4 top-4 z-20 flex flex-col items-start gap-2.5"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <button type="button" onClick={() => setOpen((v) => !v)} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-black bg-card px-5 py-3">
-        <div className="flex items-center gap-3.5">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-black bg-card px-4 py-2.5">
+        <div className="flex items-center gap-3">
           <p className="text-title-semibold text-text-primary">{selected.name}</p>
-          <div className="flex items-center justify-center rounded-xl bg-background px-2 py-1">
+          <div className="flex items-center justify-center rounded-lg bg-background px-1.5 py-0.5">
             <p className="text-caption-12 text-primary-variant">{selected.state}</p>
           </div>
         </div>
-        <ChevronDownIcon className={`size-6 shrink-0 text-text-primary transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon className={`size-5 shrink-0 text-text-primary transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="flex w-81.5 flex-col items-start gap-4.75 overflow-hidden rounded-2xl bg-card px-6.5 py-5.5">
-          <div ref={listRef} className="scrollbar-none flex max-h-62 w-full flex-col items-start overflow-y-auto">
+        <div className="flex w-65 flex-col items-start gap-4 overflow-hidden rounded-xl bg-card px-5 py-4.5">
+          <div ref={listRef} className="scrollbar-none flex max-h-50 w-full flex-col items-start overflow-y-auto">
             {canvases.map((canvas) => {
               const isSelected = canvas.id === selectedId;
               return (
@@ -60,9 +60,9 @@ export default function CanvasSwitcher({ canvases, selectedId, onSelect, onAdd }
                   key={canvas.id}
                   type="button"
                   onClick={() => onSelect(canvas.id)}
-                  className={`group flex w-full cursor-pointer items-center gap-4.25 rounded-2xl p-3 text-left ${isSelected ? 'bg-card-secondary' : 'hover:bg-background/40'}`}
+                  className={`group flex w-full cursor-pointer items-center gap-3.5 rounded-xl p-2.5 text-left ${isSelected ? 'bg-card-secondary' : 'hover:bg-background/40'}`}
                 >
-                  <div className={`relative h-8.25 w-19 shrink-0 overflow-hidden rounded-xl border bg-background ${isSelected ? 'border-primary' : 'border-border'}`}>
+                  <div className={`relative h-6.5 w-15 shrink-0 overflow-hidden rounded-lg border bg-background ${isSelected ? 'border-primary' : 'border-border'}`}>
                     {canvas.thumbnail && <Image src={canvas.thumbnail} alt="" fill unoptimized className="object-cover" />}
                   </div>
                   <div className="flex flex-col items-start gap-px">
@@ -78,8 +78,8 @@ export default function CanvasSwitcher({ canvases, selectedId, onSelect, onAdd }
 
           <div className="h-px w-full bg-border" />
 
-          <button type="button" onClick={onAdd} className="flex cursor-pointer items-center gap-3 text-left">
-            <PlusIcon className="box-border size-6 shrink-0 p-1.25 text-text-secondary [&>path]:stroke-[1.25]" />
+          <button type="button" onClick={onAdd} className="flex cursor-pointer items-center gap-2.5 text-left">
+            <PlusIcon className="box-border size-5 shrink-0 p-1 text-text-secondary [&>path]:stroke-[1.25]" />
             <p className="text-label-semibold-14 text-text-secondary">새 캔버스 추가</p>
           </button>
         </div>

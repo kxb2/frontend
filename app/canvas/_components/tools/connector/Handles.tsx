@@ -2,9 +2,9 @@ import { Fragment, type RefObject } from 'react';
 import type Konva from 'konva';
 import { Circle } from 'react-konva';
 import type { Connector } from '@/types/canvas';
-import { getConnectorAnchors } from '@/app/canvas/_components/tools/connector/connectorCurve';
+import { getConnectorAnchors } from '@/app/canvas/_components/tools/connector/curve';
 
-interface ReconnectHandlesProps {
+interface HandlesProps {
   connectors: Connector[];
   selectedConnectorId: string | null;
   nodeMapRef: RefObject<Map<string, Konva.Group>>;
@@ -13,7 +13,7 @@ interface ReconnectHandlesProps {
 }
 
 // 선택된 커넥터 양쪽 끝의 재연결 핸들
-export default function ReconnectHandles({ connectors, selectedConnectorId, nodeMapRef, scale, onReconnectHandleDown }: ReconnectHandlesProps) {
+export default function Handles({ connectors, selectedConnectorId, nodeMapRef, scale, onReconnectHandleDown }: HandlesProps) {
   const selectedConnector = connectors.find((c) => c.id === selectedConnectorId);
   if (!selectedConnector) return null;
   // eslint-disable-next-line react-hooks/refs -- 의도적: 매 렌더 최신 좌표를 직접 읽어야 한다
