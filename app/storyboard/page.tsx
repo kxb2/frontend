@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import FormField from '@/app/components/FormField';
 import { storyboardFields } from '@/app/data/storyboardFields';
-import ImageGrid from '@/app/storyboard/image/imagegrid';
+// import ImageGrid from '@/app/storyboard/image/imagegrid';
+import ImageSingle from '@/app/storyboard/image/imagesingle';
 import PromptBox from '@/app/storyboard/promptbox/propmptbox';
 import { createStoryboard, getGeneration, getIntegratedPrompt, exportPdf, exportImage, getExport } from '@/app/api/storyboard/api';
 import { GenerationResult } from '@/types/api';
@@ -162,20 +163,25 @@ export default function Storyboard() {
           {/* 필드 영역만 자체적으로 스크롤됨. pb-16으로 버튼에 안 가리도록 아래 여백 확보 */}
           <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto pb-16 pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
             <div>
-              <h2 className="text-base font-semibold">AI Storyboard</h2>
-              <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p>
+              <h2 className="text-base text-[28px] font-semibold bg-linear-to-r from-primary to-[#f3e9a1] bg-clip-text text-transparent">
+                AI가 당신의 이야기를
+                <br />
+                스토리보드로 그려드립니다
+              </h2>
+              {/* <p className="mt-1 text-xs text-text-secondary">시나리오만 입력하면 9컷 스토리보드를 만들어드려요.</p> */}
             </div>
             {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
             {/* absolute + 부모 relative로 스크롤 영역과 완전히 분리, 항상 사이드바 하단에 떠 있음. z-50으로 항상 위에 보이도록 */}
             <button
               className="absolute left-4 right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary shadow-lg disabled:opacity-60"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(generation && integratedPrompt)}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
               </svg>
-              {isSubmitting ? '생성 중...' : '스토리보드 만들기'}
+              {/* 그리드 이미지 1장 구조로 바뀌면서, 재생성은 별도 엔드포인트가 정해지기 전까지 일단 비활성화 */}
+              {isSubmitting ? '생성 중...' : generation && integratedPrompt ? '스토리보드 재생성하기' : '스토리보드 만들기'}
             </button>
             <div className="flex flex-col gap-2">
               {storyboardFields.map((field) => (
@@ -221,8 +227,9 @@ export default function Storyboard() {
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2 overflow-y-auto pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
-            <ImageGrid cuts={generation?.cuts} storyboardId={storyboardId} />
-            <PromptBox promptText={integratedPrompt ?? undefined} />
+            {/* <ImageGrid cuts={generation?.cuts} storyboardId={storyboardId} /> */}
+            <ImageSingle imageUrl={generation?.gridImageUrl} storyboardId={storyboardId} isLoading={isSubmitting && !generation} />
+            <PromptBox promptText={integratedPrompt ?? undefined} isLoading={isSubmitting && !integratedPrompt} />
           </div>
         </div>
       </div>
