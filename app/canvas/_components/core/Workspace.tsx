@@ -51,19 +51,56 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     }
   }
 
-  // 여러 파일을 한 번에 불러올 때 겹치지 않도록 그리드로 배치 (기본 미디어 크기 상한 240 기준 간격)
+  // 파일 하나의 실제 크기를 비동기로 측정
+  function measureFileSize(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const cleanup = () => URL.revokeObjectURL(url);
+      if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.onloadedmetadata = () => {
+          resolve({ width: video.videoWidth || 160, height: video.videoHeight || 107 });
+          cleanup();
+        };
+        video.onerror = () => {
+          resolve({ width: 160, height: 107 });
+          cleanup();
+        };
+        video.src = url;
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        cleanup();
+      };
+      img.onerror = () => {
+        resolve({ width: 160, height: 107 });
+        cleanup();
+      };
+      img.src = url;
+    });
+  }
+
+  // 여러 파일을 한 번에 불러올 때 겹치지 않도록 그리드로 배치
   const DROP_GRID_COLS = 3;
-  const DROP_GRID_CELL = 260;
-  function addFiles(files: FileList | File[], position?: { x: number; y: number }) {
+  const DROP_GRID_GAP = 40;
+  async function addFiles(files: FileList | File[], position?: { x: number; y: number }) {
     const fileArray = Array.from(files).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
+    if (fileArray.length === 0) return;
     const baseX = position ? position.x : 200;
     const baseY = position ? position.y : 200;
+    const sizes = await Promise.all(fileArray.map(measureFileSize));
+    const cellWidth = Math.max(...sizes.map((s) => s.width)) + DROP_GRID_GAP;
+    const cellHeight = Math.max(...sizes.map((s) => s.height)) + DROP_GRID_GAP;
     const newItems = fileArray.map((file, index) => ({
       id: genId(),
       type: file.type.startsWith('video/') ? ('video' as const) : ('image' as const),
       src: URL.createObjectURL(file), // 업로드 완료 전까지의 낙관적 미리보기
-      x: baseX + (index % DROP_GRID_COLS) * DROP_GRID_CELL,
-      y: baseY + Math.floor(index / DROP_GRID_COLS) * DROP_GRID_CELL,
+      width: sizes[index].width,
+      height: sizes[index].height,
+      x: baseX + (index % DROP_GRID_COLS) * cellWidth,
+      y: baseY + Math.floor(index / DROP_GRID_COLS) * cellHeight,
       rotate: 0,
     }));
 
@@ -144,7 +181,9 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
 
   function addMemoItem(x: number, y: number) {
     const id = genId();
-    const seq = items.filter((item) => item.type === 'memo').length + 1;
+    // 지금까지 나와 있는 최대 번호+1로 정함
+    const maxSeq = items.reduce((max, item) => (item.type === 'memo' ? Math.max(max, item.seq) : max), 0);
+    const seq = maxSeq + 1;
     commitDoc((prev) => ({
       ...prev,
       items: [...prev.items, { id, type: 'memo' as const, text: '', color: 'default' as const, seq, viewMode: 'full' as const, x, y, rotate: 0 }],

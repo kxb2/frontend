@@ -12,7 +12,8 @@ function itemToElementIn(item: CanvasItem): CanvasElementIn {
     parentClientKey: item.parentId ?? null,
   };
   if (item.type === 'memo') {
-    return { ...base, width: item.width ?? null, height: item.height ?? null, memoContent: item.text, memoColor: item.color };
+    // memoTitle 필드에 seq를 실어서 보내고, 조회 시 그대로 읽어와 순번이 저장/조회 순서와 무관하게 항상 같게 함
+    return { ...base, width: item.width ?? null, height: item.height ?? null, memoContent: item.text, memoColor: item.color, memoTitle: String(item.seq) };
   }
   if (item.type === 'section') {
     return { ...base, width: item.width, height: item.height };
@@ -36,20 +37,23 @@ export function fromDetailResponse(detail: CanvasDetailResponse): CanvasDocument
   const localIdByServerId = new Map<number, string>();
   detail.elements.forEach((element) => localIdByServerId.set(element.id, element.clientKey ?? String(element.id)));
 
-  let memoSeq = 0;
+  // 메모 순번(seq): memoTitle에 저장해둔 값을 우선 사용(저장/조회 순서가 바뀌어도 항상 같은 번호가 나옴).
+  // memoTitle이 없는 예전 데이터만, 등장 순서로 번호를 채워 넣는 예전 방식으로 대체
+  let legacyMemoSeq = 0;
   const items: CanvasItem[] = detail.elements.map((element) => {
     const id = element.clientKey ?? String(element.id);
     const parentId = element.parentElementId !== null ? localIdByServerId.get(element.parentElementId) : undefined;
     const base = { id, x: element.x, y: element.y, rotate: element.rotation ?? 0, parentId };
 
     if (element.type === 'memo') {
-      memoSeq += 1;
+      const savedSeq = Number(element.memoTitle);
+      legacyMemoSeq += 1;
       return {
         ...base,
         type: 'memo' as const,
         text: element.memoContent ?? '',
         color: (element.memoColor as MemoColor | null) ?? 'default',
-        seq: memoSeq, // 백엔드엔 순번 개념이 없어 등장 순서로 재계산
+        seq: Number.isFinite(savedSeq) && savedSeq > 0 ? savedSeq : legacyMemoSeq,
         viewMode: 'full' as const,
         width: element.width ?? undefined,
         height: element.height ?? undefined,

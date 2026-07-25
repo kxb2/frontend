@@ -26,7 +26,9 @@ import { useRotate } from '@/app/canvas/_components/transform/useRotate';
 import { useViewport } from '@/app/canvas/_components/core/useViewport';
 import { expandSectionChildrenIds } from '@/app/canvas/_components/transform/useSelect';
 import { isSelectTool } from '@/app/canvas/_components/core/Toolbar';
-import { MEMO_PALETTE, MEMO_WIDTH } from '@/app/canvas/_components/tools/memo/layout';
+import { MEMO_PALETTE } from '@/app/canvas/_components/tools/memo/layout';
+import { getItemDisplaySize } from '@/app/canvas/_components/core/utils';
+import Minimap from '@/app/canvas/_components/core/Minimap';
 
 // 섹션/미디어 꼭짓점 컨트롤 공통 설정
 const DIAGONAL_CORNER_CONFIG: Record<CornerAnchor, { handle: ResizeHandle; cursor: string }> = {
@@ -52,8 +54,9 @@ function renderFallbackThumbnail(items: CanvasItem[], scale: number, stagePos: {
   ctx.fillStyle = '#141518';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   items.forEach((item) => {
-    const w = (item.type === 'memo' ? (item.width ?? MEMO_WIDTH) : item.type === 'section' ? item.width : (item.width ?? 120)) * scale * THUMBNAIL_PIXEL_RATIO;
-    const h = (item.type === 'memo' ? (item.height ?? 80) : item.type === 'section' ? item.height : (item.height ?? 80)) * scale * THUMBNAIL_PIXEL_RATIO;
+    const size = getItemDisplaySize(item);
+    const w = size.width * scale * THUMBNAIL_PIXEL_RATIO;
+    const h = size.height * scale * THUMBNAIL_PIXEL_RATIO;
     const x = (item.x * scale + stagePos.x) * THUMBNAIL_PIXEL_RATIO;
     const y = (item.y * scale + stagePos.y) * THUMBNAIL_PIXEL_RATIO;
     ctx.fillStyle = item.type === 'section' ? 'rgba(57,66,87,0.5)' : item.type === 'memo' ? MEMO_PALETTE[item.color].header : '#3a3f4d';
@@ -574,6 +577,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
           style={{ left: selectionBox.x, top: selectionBox.y, width: selectionBox.w, height: selectionBox.h }}
         />
       )}
+
+      <Minimap items={items} scale={scale} stagePos={stagePos} viewportSize={size} onNavigate={setStagePos} />
     </div>
   );
 });
