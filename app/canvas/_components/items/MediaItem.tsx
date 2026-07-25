@@ -22,13 +22,6 @@ function resolveMediaSrc(src: string): string {
   return src;
 }
 
-// 주어진 naturalWidth/naturalHeight를 cap (240px) 이하로 맞춤
-function fitWithinCap(naturalWidth: number, naturalHeight: number, cap = 240) {
-  if (naturalWidth <= cap && naturalHeight <= cap) return { width: naturalWidth, height: naturalHeight };
-  const ratio = Math.min(cap / naturalWidth, cap / naturalHeight);
-  return { width: naturalWidth * ratio, height: naturalHeight * ratio };
-}
-
 interface MediaItemProps {
   item: MediaCanvasItem;
   tool: Tool;
@@ -84,7 +77,7 @@ export default function MediaItem({
           if (!useCors) onTaintCanvas();
           setLoadFailed(false);
           setSource(img);
-          setMediaSize(fitWithinCap(img.naturalWidth, img.naturalHeight));
+          setMediaSize({ width: img.naturalWidth, height: img.naturalHeight });
         };
         img.onerror = () => {
           if (cancelled) return;
@@ -155,7 +148,7 @@ export default function MediaItem({
       if (triedWithoutCors) onTaintCanvas();
       setLoadFailed(false);
       setSource(video);
-      setMediaSize(fitWithinCap(video.videoWidth, video.videoHeight));
+      setMediaSize({ width: video.videoWidth, height: video.videoHeight });
       const wasMuted = video.muted;
       suppressPlayPauseEvents = true;
       video.muted = true;

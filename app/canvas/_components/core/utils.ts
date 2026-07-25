@@ -1,3 +1,13 @@
+import type { CanvasItem } from '@/types/canvas';
+import { MEMO_WIDTH } from '@/app/canvas/_components/tools/memo/layout';
+
+// 아이템 타입별 기본 크기(폭/높이 미지정 시), 대략적 크기만 필요할 때 사용
+export function getItemDisplaySize(item: CanvasItem): { width: number; height: number } {
+  if (item.type === 'section') return { width: item.width, height: item.height };
+  if (item.type === 'memo') return { width: item.width ?? MEMO_WIDTH, height: item.height ?? 80 };
+  return { width: item.width ?? 160, height: item.height ?? 107 };
+}
+
 // 드래그/회전/스케일 중 페이지 전체 텍스트가 함께 드래그 선택되는 것을 방지
 function disableTextSelect() {
   document.body.style.userSelect = 'none';
