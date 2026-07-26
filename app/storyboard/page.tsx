@@ -249,8 +249,18 @@ function StoryboardInner() {
           {/* 필드 영역만 자체적으로 스크롤됨. pb-16으로 버튼에 안 가리도록 아래 여백 확보 */}
           <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto pb-16 pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
             <div>
-              <h2 className="text-base font-semibold">{viewedStoryboard ? (viewedStoryboard.title ?? `Storyboard ${viewedStoryboard.id}`) : 'AI Storyboard'}</h2>
-              <p className="mt-1 text-xs text-text-secondary">{viewedStoryboard ? '저장된 스토리보드입니다.' : '시나리오만 입력하면 9컷 스토리보드를 만들어드려요.'}</p>
+              <h2 className="text-base text-[28px] font-semibold bg-linear-to-r from-primary to-[#f3e9a1] bg-clip-text text-transparent">
+                {viewedStoryboard ? (
+                  (viewedStoryboard.title ?? `Storyboard ${viewedStoryboard.id}`)
+                ) : (
+                  <>
+                    AI가 당신의 이야기를
+                    <br />
+                    스토리보드로 그려드립니다.
+                  </>
+                )}
+              </h2>
+              <p className="mt-1 text-xs text-text-secondary">{viewedStoryboard ? '저장된 스토리보드입니다.' : ''}</p>
             </div>
             {viewedStoryboard ? (
               <ReadStoryboard storyboard={viewedStoryboard} />

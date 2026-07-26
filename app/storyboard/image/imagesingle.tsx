@@ -4,7 +4,7 @@ import { ImageSingleProps } from '@/types/storyboard';
 // 9컷이 합쳐진 그리드 이미지 1장을 표시 (재생성은 사이드바의 '스토리보드 재생성하기' 버튼이 담당)
 export default function ImageSingle({ imageUrl, isLoading }: ImageSingleProps) {
   return (
-    <div className="relative flex-1 min-w-125 min-h-125 overflow-hidden rounded-xl border border-border bg-linear-to-br from-primary/30 from-15% via-[#3B5BDB]/80 via-75% to-background flex items-center justify-center">
+    <div className="relative flex-1 min-w-125 min-h-125 overflow-hidden rounded-xl border border-border bg-linear-to-br from-[#3B2478] via-[#141634]  to-[#1B2A63] flex items-center justify-center">
       {isLoading && !imageUrl ? (
         // 생성 중이고 아직 그리드 이미지가 없으면 스켈레톤 표시
         <div className="absolute inset-0">
