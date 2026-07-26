@@ -35,6 +35,15 @@ function GoogleSignInButton({ onCredential, onUnavailable, disabled }: { onCrede
         if (cancelled || !overlayRef.current || !window.google) return;
         initializeGoogleIdentity(GOOGLE_CLIENT_ID, (idToken) => onCredentialRef.current(idToken));
         window.google.accounts.id.renderButton(overlayRef.current, { type: 'standard', size: 'large', width: 400 });
+        const rendered = overlayRef.current.firstElementChild as HTMLElement | null;
+        if (rendered) {
+          const renderedRect = rendered.getBoundingClientRect();
+          const containerRect = overlayRef.current.getBoundingClientRect();
+          if (renderedRect.width > 0 && renderedRect.height > 0) {
+            rendered.style.transformOrigin = 'top left';
+            rendered.style.transform = `scale(${containerRect.width / renderedRect.width}, ${containerRect.height / renderedRect.height})`;
+          }
+        }
       })
       .catch((error) => console.error('Google 로그인 스크립트 로드 실패:', error));
     return () => {
@@ -53,7 +62,7 @@ function GoogleSignInButton({ onCredential, onUnavailable, disabled }: { onCrede
         <Image src={googleLogo} alt="" className="size-6" />
         Google 계정으로 로그인
       </button>
-      {GOOGLE_CLIENT_ID && !disabled && <div ref={overlayRef} className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden opacity-0 [&>div]:pointer-events-auto" />}
+      {GOOGLE_CLIENT_ID && !disabled && <div ref={overlayRef} className="absolute inset-0 overflow-hidden opacity-0" />}
     </div>
   );
 }
