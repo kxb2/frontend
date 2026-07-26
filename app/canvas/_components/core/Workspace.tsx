@@ -8,6 +8,7 @@ import { computeMemoTotalHeight } from '@/app/canvas/_components/tools/memo/layo
 import { rotateAround } from '@/app/canvas/_components/core/utils';
 import { saveCanvas, uploadCanvasAttachment } from '@/app/api/canvas/api';
 import { toSaveRequest } from '@/app/api/canvas/adapter';
+import { saveLastSavedAt } from '@/app/utils/savedAt';
 import type { CanvasDocument, CanvasItem, MemoColor, MemoViewMode, SelectionBox } from '@/types/canvas';
 
 let nextId = 0;
@@ -50,19 +51,56 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     }
   }
 
-  // 여러 파일을 한 번에 불러올 때 겹치지 않도록 그리드로 배치 (기본 미디어 크기 상한 240 기준 간격)
+  // 파일 하나의 실제 크기를 비동기로 측정
+  function measureFileSize(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const cleanup = () => URL.revokeObjectURL(url);
+      if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.onloadedmetadata = () => {
+          resolve({ width: video.videoWidth || 160, height: video.videoHeight || 107 });
+          cleanup();
+        };
+        video.onerror = () => {
+          resolve({ width: 160, height: 107 });
+          cleanup();
+        };
+        video.src = url;
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        cleanup();
+      };
+      img.onerror = () => {
+        resolve({ width: 160, height: 107 });
+        cleanup();
+      };
+      img.src = url;
+    });
+  }
+
+  // 여러 파일을 한 번에 불러올 때 겹치지 않도록 그리드로 배치
   const DROP_GRID_COLS = 3;
-  const DROP_GRID_CELL = 260;
-  function addFiles(files: FileList | File[], position?: { x: number; y: number }) {
+  const DROP_GRID_GAP = 40;
+  async function addFiles(files: FileList | File[], position?: { x: number; y: number }) {
     const fileArray = Array.from(files).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
+    if (fileArray.length === 0) return;
     const baseX = position ? position.x : 200;
     const baseY = position ? position.y : 200;
+    const sizes = await Promise.all(fileArray.map(measureFileSize));
+    const cellWidth = Math.max(...sizes.map((s) => s.width)) + DROP_GRID_GAP;
+    const cellHeight = Math.max(...sizes.map((s) => s.height)) + DROP_GRID_GAP;
     const newItems = fileArray.map((file, index) => ({
       id: genId(),
       type: file.type.startsWith('video/') ? ('video' as const) : ('image' as const),
       src: URL.createObjectURL(file), // 업로드 완료 전까지의 낙관적 미리보기
-      x: baseX + (index % DROP_GRID_COLS) * DROP_GRID_CELL,
-      y: baseY + Math.floor(index / DROP_GRID_COLS) * DROP_GRID_CELL,
+      width: sizes[index].width,
+      height: sizes[index].height,
+      x: baseX + (index % DROP_GRID_COLS) * cellWidth,
+      y: baseY + Math.floor(index / DROP_GRID_COLS) * cellHeight,
       rotate: 0,
     }));
 
@@ -143,7 +181,9 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
 
   function addMemoItem(x: number, y: number) {
     const id = genId();
-    const seq = items.filter((item) => item.type === 'memo').length + 1;
+    // 지금까지 나와 있는 최대 번호+1로 정함
+    const maxSeq = items.reduce((max, item) => (item.type === 'memo' ? Math.max(max, item.seq) : max), 0);
+    const seq = maxSeq + 1;
     commitDoc((prev) => ({
       ...prev,
       items: [...prev.items, { id, type: 'memo' as const, text: '', color: 'default' as const, seq, viewMode: 'full' as const, x, y, rotate: 0 }],
@@ -275,6 +315,9 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 한 번만 예약하면 됨
   }, []);
 
+  // 디바운스 대기 중인, 아직 서버에 저장 안 된 최신 문서 (캔버스 전환/페이지 이탈 시 유실 방지용 flush 대상)
+  const pendingDocRef = useRef<CanvasDocument | null>(null);
+
   // 문서가 바뀔 때마다 (1) 디바운스 후 백엔드에 저장 (2) 썸네일 갱신(클라이언트에서만 캡처)
   const initialDocRef = useRef(initialDoc);
   useEffect(() => {
@@ -283,11 +326,16 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
 
     // 업로드 중(blob: 미리보기)이면 저장 보류
     const hasPendingUpload = doc.items.some((item) => (item.type === 'image' || item.type === 'video') && item.src.startsWith('blob:'));
+    pendingDocRef.current = hasPendingUpload ? null : doc;
     const saveTimeout = hasPendingUpload
       ? undefined
       : setTimeout(() => {
+          pendingDocRef.current = null;
           saveCanvas(canvasId, toSaveRequest(doc))
-            .then(() => onSaveStateChange('saved'))
+            .then(() => {
+              saveLastSavedAt(String(canvasId), new Date().toISOString()); // 백엔드 updatedAt이 저장해도 안 바뀌어서 직접 기록
+              onSaveStateChange('saved');
+            })
             .catch(() => onSaveStateChange('error'));
         }, SAVE_DEBOUNCE_MS);
 
@@ -301,6 +349,18 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onSaveStateChange/onThumbnailChange는 상위 렌더마다 새로 생성되므로 deps에 넣지 않음
   }, [doc]);
+
+  // 캔버스 전환/페이지 이탈로 이 컴포넌트가 사라질 때, 디바운스 대기 중이라 아직 못 보낸 마지막 편집을 즉시 저장
+  useEffect(() => {
+    return () => {
+      if (pendingDocRef.current) {
+        saveCanvas(canvasId, toSaveRequest(pendingDocRef.current))
+          .then(() => saveLastSavedAt(String(canvasId), new Date().toISOString()))
+          .catch((error) => console.error('나가기 전 마지막 저장 실패:', error));
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- canvasId는 이 컴포넌트 수명 동안 고정(캔버스 전환 시 key로 새로 마운트), 언마운트 시 한 번만 실행
+  }, []);
 
   return (
     <>

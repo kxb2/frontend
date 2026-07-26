@@ -75,12 +75,12 @@ export default function Header({ isLoggedIn = false }: HeaderProps) {
       </header>
 
       <div
-        className={`fixed inset-x-0 top-15 bottom-0 z-60 bg-black/50 transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        className={`fixed inset-0 z-60 bg-black/50 transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={() => setIsMenuOpen(false)}
       >
         <div className="h-full w-fit pr-3" onClick={(e) => e.stopPropagation()}>
           <div className={`h-full transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-            <Library onClose={() => setIsMenuOpen(false)} />
+            <Library isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
           </div>
         </div>
       </div>
