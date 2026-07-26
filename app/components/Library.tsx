@@ -12,11 +12,12 @@ import PencilLineIcon from '@/app/components/icons/pencil-line.svg';
 import TrashIcon from '@/app/components/icons/trash.svg';
 import logoMark from '@/app/components/icons/logo-mark.png';
 import logoText from '@/app/components/icons/logo-text.png';
-import { listCanvases, createCanvas, deleteCanvas } from '@/app/api/canvas/api';
-import { listStoryboards, deleteStoryboard } from '@/app/api/storyboard/api';
+import { listCanvases, createCanvas, deleteCanvas, renameCanvas } from '@/app/api/canvas/api';
+import { listStoryboards, deleteStoryboard, renameStoryboard } from '@/app/api/storyboard/api';
 import { formatRelativeTime } from '@/app/utils/time';
 import { loadLastSavedAt } from '@/app/utils/savedAt';
 import { loadLastActiveCanvasId, loadLastViewedStoryboardId } from '@/app/utils/lastSelected';
+import { emitCanvasRenamed, emitStoryboardRenamed } from '@/app/utils/syncEvents';
 
 interface RecentItem {
   id: string;
@@ -66,11 +67,14 @@ interface RecentSectionProps {
   onSelectItem: (id: string) => void;
   onCreateNew: () => void;
   onDeleteItem: (id: string) => void;
+  onRenameItem: (id: string, title: string) => void;
 }
 
-function RecentSection({ title, items, icon: Icon, selectedId, onSelectItem, onCreateNew, onDeleteItem }: RecentSectionProps) {
+function RecentSection({ title, items, icon: Icon, selectedId, onSelectItem, onCreateNew, onDeleteItem, onRenameItem }: RecentSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
   const openMenuRef = useRef<HTMLDivElement>(null);
   const hasMore = items.length > RECENT_SECTION_VISIBLE_COUNT;
   const visibleItems = isExpanded ? items : items.slice(0, RECENT_SECTION_VISIBLE_COUNT);
@@ -99,25 +103,58 @@ function RecentSection({ title, items, icon: Icon, selectedId, onSelectItem, onC
         {visibleItems.map((item) => {
           const isSelected = item.id === selectedId;
           const isMenuOpen = openMenuItemId === item.id;
+          const isEditing = editingItemId === item.id;
           const showActions = isSelected || isMenuOpen;
+
+          function commitEditing() {
+            const trimmed = editingValue.trim();
+            setEditingItemId(null);
+            if (trimmed && trimmed !== item.label) onRenameItem(item.id, trimmed);
+          }
+          function cancelEditing() {
+            setEditingItemId(null);
+          }
+
           return (
             <div
               key={item.id}
               ref={isMenuOpen ? openMenuRef : undefined}
               className={`group relative flex w-full items-center justify-between px-3 py-2 ${isSelected ? 'rounded-xl bg-background' : 'rounded-2xl'}`}
             >
-              <button type="button" onClick={() => onSelectItem(item.id)} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left">
-                <Icon className={`size-4 shrink-0 ${isSelected ? 'text-primary' : 'text-text-primary'}`} />
-                <p className={`truncate text-label-regular-14 ${isSelected ? 'text-primary' : 'text-text-primary'}`}>{item.label}</p>
-              </button>
+              {isEditing ? (
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <Icon className={`size-4 shrink-0 ${isSelected ? 'text-primary' : 'text-text-primary'}`} />
+                  <input
+                    autoFocus
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={cancelEditing}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitEditing();
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelEditing();
+                      }
+                    }}
+                    className="text-label-regular-14 min-w-0 flex-1 bg-transparent text-text-primary focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <button type="button" onClick={() => onSelectItem(item.id)} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left">
+                  <Icon className={`size-4 shrink-0 ${isSelected ? 'text-primary' : 'text-text-primary'}`} />
+                  <p className={`truncate text-label-regular-14 ${isSelected ? 'text-primary' : 'text-text-primary'}`}>{item.label}</p>
+                </button>
+              )}
 
               <div className="flex shrink-0 items-center gap-2 pl-2">
-                <p className={`text-caption-12 text-text-disabled ${showActions ? 'hidden' : 'group-hover:hidden'}`}>{item.time}</p>
+                <p className={`text-caption-12 text-text-disabled ${isEditing || showActions ? 'hidden' : 'group-hover:hidden'}`}>{item.time}</p>
                 <button
                   type="button"
                   aria-label="더보기"
                   onClick={() => setOpenMenuItemId((prev) => (prev === item.id ? null : item.id))}
-                  className={`text-text-primary size-5 shrink-0 cursor-pointer items-center justify-center ${showActions ? 'flex' : 'hidden group-hover:flex'}`}
+                  className={`text-text-primary size-5 shrink-0 cursor-pointer items-center justify-center ${isEditing ? 'hidden' : showActions ? 'flex' : 'hidden group-hover:flex'}`}
                 >
                   <MoreDotsIcon className="w-5" />
                 </button>
@@ -125,7 +162,11 @@ function RecentSection({ title, items, icon: Icon, selectedId, onSelectItem, onC
 
               {isMenuOpen && (
                 <ItemActionsMenu
-                  onRename={() => setOpenMenuItemId(null)}
+                  onRename={() => {
+                    setOpenMenuItemId(null);
+                    setEditingValue(item.label);
+                    setEditingItemId(item.id);
+                  }}
                   onDelete={() => {
                     setOpenMenuItemId(null);
                     onDeleteItem(item.id);
@@ -158,9 +199,9 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
   const [canvasItems, setCanvasItems] = useState<RecentItem[]>([]);
   const [storyboardItems, setStoryboardItems] = useState<RecentItem[]>([]);
 
-  // 캔버스 화면에 있을 때만, 지금 보고 있는 캔버스를 선택된 것으로 표시 (canvas/page.tsx가 기록해두는 값)
+  // 캔버스 화면일 때만 보고 있는 캔버스를 선택 표시
   const selectedCanvasId = pathname === '/canvas' ? loadLastActiveCanvasId() : null;
-  // 스토리보드 화면에 있을 때만, 지금 보고 있는 스토리보드를 선택된 것으로 표시 (storyboard/page.tsx가 기록해두는 값)
+  // 스토리보드 화면일 때만 보고 있는 스토리보드를 선택 표시
   const selectedStoryboardId = pathname === '/storyboard' ? loadLastViewedStoryboardId() : null;
 
   // 메뉴를 열 때마다 다시 조회
@@ -171,7 +212,7 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
         const list = await listCanvases();
         // 생성 순서로 고정
         const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        // 백엔드 updatedAt은 저장해도 안 바뀌므로, 이 브라우저에서 직접 기록해둔 마지막 저장 시각이 있으면 그걸 우선 사용
+        // 백엔드 updatedAt은 저장해도 안 바뀌어서, 로컬에 기록된 마지막 저장 시각을 우선 사용
         setCanvasItems(sorted.map((item) => ({ id: String(item.id), label: item.title ?? `Canvas ${item.id}`, time: formatRelativeTime(loadLastSavedAt(String(item.id)) ?? item.updatedAt) })));
       } catch (error) {
         console.error('캔버스 목록 조회에 실패했습니다:', error);
@@ -242,6 +283,32 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
     }
   }
 
+  // 캔버스 이름 변경 (목록 갱신 + 스위처에도 실시간 반영)
+  async function handleRenameCanvas(id: string, title: string) {
+    try {
+      const result = await renameCanvas(Number(id), title);
+      const newLabel = result.title ?? title;
+      setCanvasItems((prev) => prev.map((item) => (item.id === id ? { ...item, label: newLabel } : item)));
+      emitCanvasRenamed(id, newLabel);
+    } catch (error) {
+      console.error(error);
+      alert('캔버스 이름 변경에 실패했습니다.');
+    }
+  }
+
+  // 스토리보드 이름 변경 (목록 갱신 + 뷰 화면에도 실시간 반영)
+  async function handleRenameStoryboard(id: string, title: string) {
+    try {
+      const result = await renameStoryboard(Number(id), title);
+      const newLabel = result.title ?? title;
+      setStoryboardItems((prev) => prev.map((item) => (item.id === id ? { ...item, label: newLabel } : item)));
+      emitStoryboardRenamed(id, newLabel);
+    } catch (error) {
+      console.error(error);
+      alert('스토리보드 이름 변경에 실패했습니다.');
+    }
+  }
+
   return (
     <div className="bg-card scrollbar-none flex h-full w-101 flex-col overflow-y-auto rounded-r-xl">
       <div className="flex w-full items-center gap-2 p-8">
@@ -249,7 +316,7 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
           <MenuIcon className="size-6" />
         </button>
         <Image src={logoMark} alt="" className="size-6" />
-        <Image src={logoText} alt="GeNova" className="h-4.5 w-20" />
+        <Image src={logoText} alt="GeNova" className="h-4.5 w-20" priority />
       </div>
 
       <div className="bg-border h-px w-full shrink-0" />
@@ -262,6 +329,7 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
         onSelectItem={handleSelectStoryboard}
         onCreateNew={handleCreateStoryboard}
         onDeleteItem={handleDeleteStoryboard}
+        onRenameItem={handleRenameStoryboard}
       />
 
       <div className="bg-border h-px w-full shrink-0" />
@@ -274,6 +342,7 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
         onSelectItem={handleSelectCanvas}
         onCreateNew={handleCreateCanvas}
         onDeleteItem={handleDeleteCanvas}
+        onRenameItem={handleRenameCanvas}
       />
 
       <div className="bg-border h-px w-full shrink-0" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,20 +9,30 @@ import BellIcon from '@/app/components/icons/bell.svg';
 import logoMark from '@/app/components/icons/logo-mark.png';
 import logoText from '@/app/components/icons/logo-text.png';
 import Library from '@/app/components/Library';
+import { useAuth } from '@/app/auth/AuthContext';
+import { PROTECTED_PATHS } from '@/app/auth/protectedPaths';
 
 const NAV_LINKS = [
   { href: '/storyboard', label: 'Storyboard' },
   { href: '/canvas', label: 'Canvas' },
 ];
 
-interface HeaderProps {
-  // 실제 로그인 연동 전까지는 로그아웃 상태를 기본값으로 둔다.
-  isLoggedIn?: boolean;
-}
-
-export default function Header({ isLoggedIn = false }: HeaderProps) {
+export default function Header() {
   const pathname = usePathname();
+  const { user, logout, openAuthModal, requireAuth } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // 프로필 드롭다운이 열려있을 때 바깥 클릭하면 닫기
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) setIsProfileMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isProfileMenuOpen]);
 
   return (
     <>
@@ -31,7 +41,11 @@ export default function Header({ isLoggedIn = false }: HeaderProps) {
           <button
             type="button"
             aria-label="메뉴"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
+            onClick={() => {
+              // 로그인해야 볼 수 있는 라이브러리라 안 돼있으면 로그인창부터 띄움
+              if (!requireAuth()) return;
+              setIsMenuOpen((prev) => !prev);
+            }}
             className="text-text-primary size-6 shrink-0 cursor-pointer"
           >
             <MenuIcon className="size-6" />
@@ -46,7 +60,14 @@ export default function Header({ isLoggedIn = false }: HeaderProps) {
           {NAV_LINKS.map(({ href, label }) => {
             const isActive = pathname === href;
             return (
-              <Link key={href} href={href} className={`flex flex-col items-center ${isActive ? 'text-label-semibold-16 text-text-primary' : 'text-body text-text-disabled'}`}>
+              <Link
+                key={href}
+                href={href}
+                onClick={(e) => {
+                  if (PROTECTED_PATHS.includes(href) && !requireAuth()) e.preventDefault();
+                }}
+                className={`flex flex-col items-center ${isActive ? 'text-label-semibold-16 text-text-primary' : 'text-body text-text-disabled'}`}
+              >
                 {label}
                 <span className={`mt-1 h-px w-full ${isActive ? 'bg-white' : 'bg-transparent'}`} />
               </Link>
@@ -54,22 +75,39 @@ export default function Header({ isLoggedIn = false }: HeaderProps) {
           })}
         </nav>
 
-        {isLoggedIn ? (
-          <div className="flex items-center gap-5">
+        {user ? (
+          <div className="relative flex items-center gap-5" ref={profileMenuRef}>
             <BellIcon className="text-text-disabled size-6 shrink-0" />
-            {/* 실제 유저 아바타가 생기면 이 원 안에 이미지로 채우면 됨 */}
-            <div className="border-secondary flex size-7 shrink-0 items-center justify-center rounded-full border">
+            <button type="button" aria-label="프로필" onClick={() => setIsProfileMenuOpen((prev) => !prev)} className="border-secondary flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border">
               <div className="bg-text-primary size-6 rounded-full" />
-            </div>
+            </button>
+            {isProfileMenuOpen && (
+              <div className="bg-surface absolute right-0 top-full z-20 mt-2 flex w-52 flex-col gap-3 rounded-2xl border border-border-divider p-4 shadow-lg">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-label-regular-14 truncate text-text-primary">{user.nickname ?? user.email}</p>
+                  <p className="text-caption-12 truncate text-text-disabled">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-label-regular-14 cursor-pointer self-start text-text-secondary"
+                >
+                  로그아웃
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <Link href="#" className="text-label-regular-14 text-text-primary">
+            <button type="button" onClick={() => openAuthModal('login')} className="text-label-regular-14 cursor-pointer text-text-primary">
               Login
-            </Link>
-            <Link href="#" className="bg-secondary text-card-secondary text-label-regular-14 rounded-2xl px-2 py-1">
+            </button>
+            <button type="button" onClick={() => openAuthModal('signup')} className="bg-secondary text-card-secondary text-label-regular-14 cursor-pointer rounded-2xl px-2 py-1">
               Sign up
-            </Link>
+            </button>
           </div>
         )}
       </header>
