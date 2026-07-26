@@ -64,6 +64,17 @@ export async function getStoryboard(storyboardId: number): Promise<StoryboardDet
   return response.json();
 }
 
+// 스토리보드 삭제 (DELETE {API_BASE_URL}/storyboards/{storyboardId})
+export async function deleteStoryboard(storyboardId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/storyboards/${storyboardId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('스토리보드 삭제에 실패했습니다.');
+  }
+}
+
 // 9컷 생성 상태 조회 (GET {API_BASE_URL}/generations/{generationId})
 export async function getGeneration(generationId: number): Promise<GenerationResult> {
   // fetch의 기본값은 GET이기에 아무것도 적지 않으면 자동으로 GET 요청처리
