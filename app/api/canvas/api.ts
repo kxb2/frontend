@@ -5,14 +5,13 @@ import {
   CanvasDetailResponse,
   CanvasListItem,
   CanvasSaveRequest,
+  CanvasTitleResponse,
 } from '@/types/canvasApi';
+import { authorizedFetch } from '@/app/api/http';
 
-// 실제 백엔드 서버 주소. .env.local의 NEXT_PUBLIC_API_URL을 읽고, 없으면 로컬 기본값 사용
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
-
-// 캔버스 생성 (POST {API_BASE_URL}/canvases)
+// 캔버스 생성 (POST /canvases)
 export async function createCanvas(storyboardId?: number): Promise<CanvasCreateResponse> {
-  const response = await fetch(`${API_BASE_URL}/canvases`, {
+  const response = await authorizedFetch('/canvases', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ storyboardId: storyboardId ?? null }),
@@ -25,10 +24,10 @@ export async function createCanvas(storyboardId?: number): Promise<CanvasCreateR
   return response.json();
 }
 
-// 캔버스 목록 조회 (GET {API_BASE_URL}/canvases)
+// 캔버스 목록 조회 (GET /canvases)
 export async function listCanvases(limit?: number): Promise<CanvasListItem[]> {
   const query = limit !== undefined ? `?limit=${limit}` : '';
-  const response = await fetch(`${API_BASE_URL}/canvases${query}`);
+  const response = await authorizedFetch(`/canvases${query}`);
 
   if (!response.ok) {
     throw new Error('캔버스 목록 조회에 실패했습니다.');
@@ -37,9 +36,9 @@ export async function listCanvases(limit?: number): Promise<CanvasListItem[]> {
   return response.json();
 }
 
-// 캔버스 상세 조회 (GET {API_BASE_URL}/canvases/{canvasId})
+// 캔버스 상세 조회 (GET /canvases/{canvasId})
 export async function getCanvas(canvasId: number): Promise<CanvasDetailResponse> {
-  const response = await fetch(`${API_BASE_URL}/canvases/${canvasId}`);
+  const response = await authorizedFetch(`/canvases/${canvasId}`);
 
   if (!response.ok) {
     throw new Error('캔버스 조회에 실패했습니다.');
@@ -48,9 +47,9 @@ export async function getCanvas(canvasId: number): Promise<CanvasDetailResponse>
   return response.json();
 }
 
-// 캔버스 저장 -- 요소/연결 전체 교체 (PUT {API_BASE_URL}/canvases/{canvasId})
+// 캔버스 저장 -- 요소/연결 전체 교체 (PUT /canvases/{canvasId})
 export async function saveCanvas(canvasId: number, body: CanvasSaveRequest): Promise<CanvasDetailResponse> {
-  const response = await fetch(`${API_BASE_URL}/canvases/${canvasId}`, {
+  const response = await authorizedFetch(`/canvases/${canvasId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -63,9 +62,24 @@ export async function saveCanvas(canvasId: number, body: CanvasSaveRequest): Pro
   return response.json();
 }
 
-// 캔버스 삭제 (DELETE {API_BASE_URL}/canvases/{canvasId})
+// 캔버스 제목 수정 (PATCH /canvases/{canvasId})
+export async function renameCanvas(canvasId: number, title: string): Promise<CanvasTitleResponse> {
+  const response = await authorizedFetch(`/canvases/${canvasId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+
+  if (!response.ok) {
+    throw new Error('캔버스 이름 변경에 실패했습니다.');
+  }
+
+  return response.json();
+}
+
+// 캔버스 삭제 (DELETE /canvases/{canvasId})
 export async function deleteCanvas(canvasId: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/canvases/${canvasId}`, {
+  const response = await authorizedFetch(`/canvases/${canvasId}`, {
     method: 'DELETE',
   });
 
@@ -74,13 +88,13 @@ export async function deleteCanvas(canvasId: number): Promise<void> {
   }
 }
 
-// 이미지/영상 첨부 업로드 (POST {API_BASE_URL}/canvases/{canvasId}/attachments)
+// 이미지/영상 첨부 업로드 (POST /canvases/{canvasId}/attachments)
 export async function uploadCanvasAttachment(canvasId: number, file: File, thumbnail?: File): Promise<CanvasAttachmentResponse> {
   const formData = new FormData();
   formData.append('file', file);
   if (thumbnail) formData.append('thumbnail', thumbnail);
 
-  const response = await fetch(`${API_BASE_URL}/canvases/${canvasId}/attachments`, {
+  const response = await authorizedFetch(`/canvases/${canvasId}/attachments`, {
     method: 'POST',
     body: formData,
   });

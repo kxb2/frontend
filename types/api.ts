@@ -65,6 +65,12 @@ export interface StoryboardDetailResult {
   createdAt: string;
 }
 
+// 스토리보드 제목 수정 응답 형태 (PATCH /storyboards/{storyboardId})
+export interface StoryboardTitleResult {
+  id: number;
+  title: string | null;
+}
+
 // 통합 프롬프트 조회 응답 형태 (GET /storyboards/{storyboardId}/prompt)
 export interface IntegratedPromptResult {
   storyboardId: number; // 스토리보드 id
