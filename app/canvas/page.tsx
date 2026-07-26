@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/app/auth/AuthContext';
 import Switcher from '@/app/canvas/_components/core/Switcher';
 import Workspace, { type SaveState } from '@/app/canvas/_components/core/Workspace';
 import { createCanvas, getCanvas, listCanvases } from '@/app/api/canvas/api';
@@ -9,6 +10,7 @@ import { fromDetailResponse } from '@/app/api/canvas/adapter';
 import { formatRelativeTime } from '@/app/utils/time';
 import { loadLastSavedAt } from '@/app/utils/savedAt';
 import { loadLastActiveCanvasId, saveLastActiveCanvasId } from '@/app/utils/lastSelected';
+import { onCanvasRenamed } from '@/app/utils/syncEvents';
 import type { CanvasDocument, CanvasEntry } from '@/types/canvas';
 
 const EMPTY_DOC: CanvasDocument = { items: [], connectors: [] };
@@ -59,6 +61,7 @@ export default function CanvasPage() {
 function CanvasPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { requireAuth } = useAuth();
   const [canvases, setCanvases] = useState<CanvasEntry[] | null>(null); // null이면 목록 로딩 중
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -73,8 +76,13 @@ function CanvasPageInner() {
     return { list, entries };
   }
 
-  // 최초 로드: 캔버스 목록 조회, 하나도 없으면 새로 생성해서 시드
+  // StrictMode 이중 마운트로 시드 캔버스가 2개 생기는 것 방지
+  const seedAttemptedRef = useRef(false);
   useEffect(() => {
+    if (seedAttemptedRef.current) return;
+    seedAttemptedRef.current = true;
+    // 로그인 안 돼있으면 조회 없이 로그인창만 띄움
+    if (!requireAuth()) return;
     (async () => {
       try {
         const { list } = await refreshCanvasList();
@@ -99,9 +107,16 @@ function CanvasPageInner() {
         setLoadError(true);
       }
     })();
+  }, [requireAuth]);
+
+  // 라이브러리의 이름 변경을 이벤트로 받아 스위처에도 실시간 반영
+  useEffect(() => {
+    return onCanvasRenamed(({ id, title }) => {
+      setCanvases((prev) => prev?.map((canvas) => (canvas.id === id ? { ...canvas, name: title } : canvas)) ?? prev);
+    });
   }, []);
 
-  // 라이브러리 등에서 ?id=로 특정 캔버스를 지정해 들어온 경우 그 캔버스로 전환 (쿼리만 바뀌는 경우는 리마운트가 안 되므로 별도로 반응해야 함)
+  // ?id= 쿼리로 지정된 캔버스로 전환
   useEffect(() => {
     if (!canvases) return;
     const idFromQuery = searchParams.get('id');
@@ -110,7 +125,7 @@ function CanvasPageInner() {
       if (canvases.some((canvas) => canvas.id === idFromQuery)) {
         selectActiveId(idFromQuery);
       } else {
-        // 라이브러리에서 방금 새로 만든 캔버스처럼, 이 페이지가 가진 목록엔 아직 없을 수 있으니 한 번 더 조회
+        // 방금 만든 캔버스처럼 아직 목록에 없을 수 있어 한 번 더 조회
         try {
           const { entries } = await refreshCanvasList();
           if (entries.some((entry) => entry.id === idFromQuery)) selectActiveId(idFromQuery);
@@ -157,7 +172,7 @@ function CanvasPageInner() {
     }
   }
 
-  // 캔버스 전환: 캐시된 문서를 지워서 위 effect가 최신 상태를 다시 불러오게 하고, 마지막으로 보던 캔버스로 기억해둠
+  // 캔버스 전환: 캐시를 지워서 위 effect가 다시 불러오게 하고, 마지막 캔버스로 기억해둠
   function selectActiveId(id: string) {
     // 이미 활성 상태면 아무것도 안 함, activeId가 그대로일 시 캐시만 지우면 빈 화면이 됨
     if (id === activeId) return;

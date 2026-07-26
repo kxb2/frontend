@@ -10,6 +10,8 @@ import PromptBox from '@/app/storyboard/promptbox/propmptbox';
 import ReadStoryboard from '@/app/storyboard/ReadStoryboard';
 import { createStoryboard, getGeneration, getIntegratedPrompt, exportPdf, exportImage, getExport, getStoryboard } from '@/app/api/storyboard/api';
 import { saveLastViewedStoryboardId } from '@/app/utils/lastSelected';
+import { onStoryboardRenamed } from '@/app/utils/syncEvents';
+import { useAuth } from '@/app/auth/AuthContext';
 import { GenerationResult, StoryboardDetailResult } from '@/types/api';
 
 // page.tsx
@@ -25,6 +27,7 @@ export default function Storyboard() {
 function StoryboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { requireAuth } = useAuth();
 
   // 필드 id 별로 값을 모아두는 state(ex: {scenario: '...', genre: 'ROMANCE', reference: [File, File]})
   const [formValues, setFormValues] = useState<Record<string, string | File[]>>({});
@@ -49,6 +52,13 @@ function StoryboardInner() {
   const [viewedStoryboard, setViewedStoryboard] = useState<StoryboardDetailResult | null>(null);
   const [viewedId, setViewedId] = useState<number | null>(null);
   const [viewError, setViewError] = useState(false);
+
+  // 라이브러리의 이름 변경을 이벤트로 받아, 지금 보는 스토리보드면 제목도 실시간 갱신
+  useEffect(() => {
+    return onStoryboardRenamed(({ id, title }) => {
+      setViewedStoryboard((prev) => (prev && String(prev.id) === id ? { ...prev, title } : prev));
+    });
+  }, []);
 
   // 라이브러리 등에서 ?id=로 들어오면 그 스토리보드를 보기, ?new=로 들어오면(같은 페이지 안에서도) 완전히 빈 화면으로 리셋
   useEffect(() => {
@@ -165,6 +175,9 @@ function StoryboardInner() {
 
   // 스토리보드 만들기 버튼 클릭 시 실행
   const handleSubmit = async () => {
+    // 로그인 안 돼있으면 모달만 띄우고 중지
+    if (!requireAuth()) return;
+
     // 필수 값을 넣지 않으면 리턴을 통해 함수 중지
     if (!formValues.scenario || !formValues.genre) {
       alert('시나리오와 장르는 필수입니다.');
