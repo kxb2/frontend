@@ -93,6 +93,12 @@ export interface CanvasSaveRequest {
   connections: CanvasConnectionIn[];
 }
 
+// 캔버스 제목 수정 응답 (PATCH /canvases/{canvasId})
+export interface CanvasTitleResponse {
+  id: number;
+  title: string | null;
+}
+
 // 첨부(이미지/영상) 업로드 응답 (POST /canvases/{canvasId}/attachments)
 export interface CanvasAttachmentResponse {
   contentUrl: string;
