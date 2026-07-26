@@ -10,6 +10,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 export async function createStoryboard(formValues: Record<string, string | File[]>): Promise<CreateStoryboardResult> {
   // 텍스트와 파일을 보내기위한 FormData 생성(브라우저가 기본 제공하는 객체)
   const formData = new FormData();
+  // 그리드 1장 생성 모드 고정값으로 적용
+  formData.append('generation_mode', 'single_image');
+
   // as string을 통해 타입 단언 선언(타입을 알려주는 것)
   // ?? -> 값이 없는 경우 undefined를 방지하기 위해 빈 문자열을 넣음
   formData.append('scenario_text', (formValues.scenario as string) ?? '');

@@ -3,6 +3,7 @@ export interface CreateStoryboardResult {
   storyboardId: number; // 스토리보드 id
   generationId: number; // 생성 작업 id
   status: string; // 상태
+  generationMode: string; // 그리드 1장 생성 모드
 }
 
 // 9컷 생성 결과 중 컷 하나의 형태

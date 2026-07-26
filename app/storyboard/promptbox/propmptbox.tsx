@@ -2,8 +2,9 @@
 
 import { PromptBoxProps } from '@/types/storyboard';
 import { useState } from 'react';
+import Skeleton from 'react-loading-skeleton';
 
-export default function PromptBox({ promptText }: PromptBoxProps) {
+export default function PromptBox({ promptText, isLoading }: PromptBoxProps) {
   // "더보기" 펼침 여부
   const [isExpanded, setIsExpanded] = useState(false);
   // 복사 완료 문구를 잠깐 보여줄지 여부
@@ -45,11 +46,14 @@ export default function PromptBox({ promptText }: PromptBoxProps) {
         </button>
       </div>
 
-      <div
-        className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${isExpanded ? '' : 'line-clamp-3'}`}
-      >
-        {promptText ?? '프롬프트'}
-      </div>
+      {isLoading && !promptText ? (
+        // 생성 중이고 아직 통합 프롬프트가 없으면 스켈레톤 표시
+        <div className="mt-3 rounded-lg border border-border bg-surface p-3">
+          <Skeleton count={3} width="95%" baseColor="#3a3c41" highlightColor="#ffffff1a" duration={2.5} />
+        </div>
+      ) : (
+        <div className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${isExpanded ? '' : 'line-clamp-3'}`}>{promptText ?? '프롬프트'}</div>
+      )}
 
       <button type="button" onClick={() => setIsExpanded((prev) => !prev)} disabled={!promptText} className="mt-2 text-xs text-text-secondary disabled:cursor-not-allowed disabled:opacity-40">
         {isExpanded ? '접기 ↑' : '더보기 ↓'}
