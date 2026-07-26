@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import type Konva from 'konva';
 import { Circle, Group, Path, Rect, Text as KonvaText } from 'react-konva';
 import type { MemoCanvasItem, MemoViewMode } from '@/types/canvas';
-import { isItemListeningTool, isSelectTool, type Tool } from '@/app/canvas/_components/toolbar';
+import { isItemListeningTool, isSelectTool, type Tool } from '@/app/canvas/_components/core/Toolbar';
 import type { MemoLiveResize, MemoResizeHandle } from '@/app/canvas/_components/tools/memo/useMemoResize';
 import {
   MEMO_ALL_CORNER_RADIUS,
@@ -28,11 +28,13 @@ import {
   MEMO_TOGGLE_SIZE,
   MEMO_WIDTH,
   TEXT_FONT_FAMILY,
+  computeMemoScalePatch,
   getMemoContentWidth,
   getMemoCounterHeight,
   getMemoWidthRatio,
   measureMemo,
-} from '@/app/canvas/_components/tools/memo/memoLayout';
+} from '@/app/canvas/_components/tools/memo/layout';
+import { ResizeEdges } from '@/app/canvas/_components/transform/ResizeEdges';
 
 interface MemoItemProps {
   item: MemoCanvasItem;
@@ -50,6 +52,7 @@ interface MemoItemProps {
   onGestureEnd: () => void;
   onLiveChange: (item: MemoCanvasItem) => void;
   onItemDblClick: (item: MemoCanvasItem) => void;
+  onMemoLiveOverride: (id: string, value: MemoLiveResize | null) => void; // 일반 다중선택 리사이즈 중 내용 기준 실시간 크기를 신고
   registerNode: (id: string, node: Konva.Group | null) => void;
   registerEditableNode: (id: string, node: Konva.Node | null) => void;
   registerMenuNode: (id: string, node: Konva.Group | null) => void;
@@ -72,6 +75,7 @@ export default function MemoItem({
   onGestureEnd,
   onLiveChange,
   onItemDblClick,
+  onMemoLiveOverride,
   registerNode,
   registerEditableNode,
   registerMenuNode,
@@ -127,18 +131,22 @@ export default function MemoItem({
   const toggleX = dotsX - toggleDotsGap - MEMO_TOGGLE_SIZE;
   const bodyPadX = MEMO_BODY_PAD_X * ratio;
   const canResize = isSelected && isSelectTool(tool);
- 
-  // 확대/축소
-  const resizeEdgeInset = 16;
-  const resizeZoneThickness = 10;
 
-  function setResizeCursor(cursor: string) {
-    return (e: Konva.KonvaEventObject<MouseEvent>) => {
-      const container = e.target.getStage()?.container();
-      if (container) container.style.cursor = cursor;
-    };
+  // 다중선택 리사이즈 시 이미지처럼 통째로 늘리지 않고, 메모 고유 방식(내용 기준 높이)으로 실시간 반영
+  function handleTransform(e: Konva.KonvaEventObject<Event>) {
+    const node = e.target;
+    const sx = node.scaleX();
+    const sy = node.scaleY();
+    if (sx !== 1 || sy !== 1) {
+      const curX = node.x() - node.offsetX() * sx;
+      const curY = node.y() - node.offsetY() * sy;
+      const { width: newWidth, height: newHeight } = computeMemoScalePatch(item, sx);
+      node.scaleX(1);
+      node.scaleY(1);
+      onMemoLiveOverride(item.id, { id: item.id, x: curX, y: curY, width: newWidth, height: newHeight });
+    }
+    onLiveChange(item);
   }
-  const clearCursor = setResizeCursor('');
 
   return (
     <Group
@@ -158,7 +166,7 @@ export default function MemoItem({
       onMouseDown={handleGroupMouseDown}
       onDblClick={() => onItemDblClick(item)}
       onDragMove={() => onLiveChange(item)}
-      onTransform={() => onLiveChange(item)}
+      onTransform={handleTransform}
       onDragEnd={onGestureEnd}
       onTransformEnd={onGestureEnd}
     >
@@ -276,54 +284,8 @@ export default function MemoItem({
         />
       )}
       {showIndividualBorder && <Rect width={width} height={totalHeight} stroke="#c255ff" strokeWidth={2} listening={false} />}
-      {/* 메모 테두리 선 = 가로/세로 사이즈 컨트롤 */}
       {canResize && (
-        <>
-          <Rect
-            x={0}
-            y={resizeEdgeInset}
-            width={resizeZoneThickness}
-            height={Math.max(0, totalHeight - resizeEdgeInset * 2)}
-            fill="transparent"
-            onMouseDown={(e) => onResizeStart('left', item, e)}
-            onMouseEnter={setResizeCursor('ew-resize')}
-            onMouseLeave={clearCursor}
-          />
-          <Rect
-            x={width - resizeZoneThickness}
-            y={resizeEdgeInset}
-            width={resizeZoneThickness}
-            height={Math.max(0, totalHeight - resizeEdgeInset * 2)}
-            fill="transparent"
-            onMouseDown={(e) => onResizeStart('right', item, e)}
-            onMouseEnter={setResizeCursor('ew-resize')}
-            onMouseLeave={clearCursor}
-          />
-          {effectiveViewMode === 'full' && (
-            <>
-              <Rect
-                x={resizeEdgeInset}
-                y={0}
-                width={Math.max(0, width - resizeEdgeInset * 2)}
-                height={resizeZoneThickness}
-                fill="transparent"
-                onMouseDown={(e) => onResizeStart('top', item, e)}
-                onMouseEnter={setResizeCursor('ns-resize')}
-                onMouseLeave={clearCursor}
-              />
-              <Rect
-                x={resizeEdgeInset}
-                y={totalHeight - resizeZoneThickness}
-                width={Math.max(0, width - resizeEdgeInset * 2)}
-                height={resizeZoneThickness}
-                fill="transparent"
-                onMouseDown={(e) => onResizeStart('bottom', item, e)}
-                onMouseEnter={setResizeCursor('ns-resize')}
-                onMouseLeave={clearCursor}
-              />
-            </>
-          )}
-        </>
+        <ResizeEdges width={width} height={totalHeight} showVertical={effectiveViewMode === 'full'} onEdgeMouseDown={(edge, e) => onResizeStart(edge, item, e)} />
       )}
     </Group>
   );

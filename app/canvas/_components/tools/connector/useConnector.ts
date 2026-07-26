@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type Konva from 'konva';
 import type { CanvasItem, Connector } from '@/types/canvas';
-import { trackWindowGesture } from '@/app/canvas/_components/canvasUtils';
-import type { Tool } from '@/app/canvas/_components/toolbar';
-import { getConnectorAnchors, getConnectorCurvePoints, getNodeAnchorTowardPoint, type ConnectorAnchor } from '@/app/canvas/_components/tools/connector/connectorCurve';
+import { trackWindowGesture } from '@/app/canvas/_components/core/utils';
+import type { Tool } from '@/app/canvas/_components/core/Toolbar';
+import { getConnectorAnchors, getConnectorCurvePoints, getNodeAnchorTowardPoint, type ConnectorAnchor } from '@/app/canvas/_components/tools/connector/curve';
 
 interface UseConnectorParams {
   tool: Tool;

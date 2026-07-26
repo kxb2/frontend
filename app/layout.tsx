@@ -1,6 +1,9 @@
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import Header from "@/app/components/Header";
+import "react-loading-skeleton/dist/skeleton.css";
+import { AuthProvider } from "@/app/auth/AuthContext";
+import AuthGate from "@/app/auth/AuthGate";
 import "./globals.css";
 
 // 영문(Inter)
@@ -26,8 +29,12 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${inter.variable} ${pretendard.variable}`}>
       <body className="flex h-screen flex-col">
-        <Header />
-        {children}
+        <AuthProvider>
+          <AuthGate>
+            <Header />
+            {children}
+          </AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );
