@@ -81,6 +81,11 @@ export async function logout(refreshToken: string): Promise<void> {
   }
 }
 
+// 로그아웃 직후 곧장 페이지를 이동할 때 사용
+export function logoutBeacon(refreshToken: string): boolean {
+  return navigator.sendBeacon(`${API_BASE_URL}/auth/logout`, new Blob([JSON.stringify({ refreshToken })], { type: 'application/json' }));
+}
+
 // 내 정보 조회 (GET /auth/me)
 export async function getMe(): Promise<AuthUser> {
   const response = await authorizedFetch('/auth/me');

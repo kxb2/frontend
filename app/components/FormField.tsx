@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { StoryBoardField } from '@/types/input';
-import { imageModelField } from '@/app/data/storyboardFields';
+import { imageModelField, styleField } from '@/app/data/storyboardFields';
 
 interface Props {
   field: StoryBoardField;
@@ -12,6 +12,16 @@ interface Props {
 export default function StoryboardFormField({ field, onFieldChange }: Props) {
   // textarea 글자수 세기 위한 state
   const [text, setText] = useState('');
+  // 타이핑 길이에 따라 높이를 늘리기 위한 textarea 참조(180~300px 범위 안에서만 조절)
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 내용 높이(scrollHeight)에 맞춰 textarea 높이를 재조정(min-h-30/max-h-60 클래스와 동일한 120~240px로 제한)
+  const adjustTextareaHeight = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto'; // 일단 초기화해야 scrollHeight가 줄어드는 경우도 정확히 측정됨
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 120), 240)}px`;
+  };
 
   // 선택한 이미지 미리보기
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
@@ -25,8 +35,8 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   // 고급 옵션(이미지 생성 모델 선택) 펼침 여부 - genre 필드에서만 사용
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-  // // 고급설정 값들
-  // const [style, setStyle] = useState(''); // 그림체(스타일)
+  // 고급설정 값들
+  const [style, setStyle] = useState(styleField.options[0]?.value ?? ''); // 그림체(스타일) 기본값: 실사
   // const [tone, setTone] = useState(''); // 톤
   // const [aspectRatio, setAspectRatio] = useState(''); // 시대 배경
   // const [era, setEra] = useState(''); // 화면비
@@ -40,10 +50,10 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
 
   // 마운트 시 기본 선택값을 부모(formValues)에도 반영
   useEffect(() => {
-    if (field.id === 'genre' && selectedImageModel) {
-      onFieldChange(imageModelField.id, selectedImageModel);
+    if (field.id === 'genre') {
+      if (selectedImageModel) onFieldChange(imageModelField.id, selectedImageModel);
+      if (style) onFieldChange(styleField.id, style);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 파일 목록을 받아 미리보기에 추가하는 공용 함수(input 선택 / 드래그앤드롭 공용)
@@ -98,23 +108,29 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
     );
   };
 
+  // 필드 타입별 카드 전체 높이 범위(참고 이미지: 200~250px, 분위기 선택/시나리오는 카드 자체엔 제한 없음)
+  // 시나리오는 textarea 자체가 이미 180~300px + 스크롤을 갖고 있어서, 카드에도 걸면 스크롤이 두 겹으로 생김
+  const cardHeightClass = field.type === 'fileUpload' ? 'min-h-50 max-h-[250px] overflow-y-auto' : '';
+
   return (
-    <div className="@container rounded-xl border border-neutral-700 bg-[#1A1A24] p-3">
+    <div className={`@container rounded-xl border border-neutral-700 bg-[#1A1A24] p-3 ${cardHeightClass}`}>
       <div className="text-sm font-semibold text-gray-100">{field.label}</div>
-      <div className="mt-1 text-xs text-gray-400">{field.description}</div>
+      {field.description && <div className="mt-1 text-xs text-gray-400">{field.description}</div>}
 
       <div className="mt-2">
         {/* 타입이 시나리오인 경우 */}
         {field.type === 'textarea' && (
           <div className="relative">
             <textarea
-              className="h-56 w-full resize-none rounded-lg border border-neutral-700 bg-[#1C1F2A] p-2 text-sm text-gray-100 placeholder:text-gray-500 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent"
+              ref={textareaRef}
+              className="w-full min-h-30 max-h-60 resize-none overflow-y-auto rounded-lg border border-neutral-700 bg-[#1C1F2A] p-2 text-sm text-gray-100 placeholder:text-gray-500 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent"
               placeholder={field.placeholder}
               maxLength={field.maxLength}
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
                 onFieldChange(field.id, e.target.value);
+                adjustTextareaHeight();
               }}
             />
             {field.maxLength && (
@@ -158,31 +174,57 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
                 </button>
 
                 {isAdvancedOpen && (
-                  <div className="mt-2">
-                    <div className="mb-1 text-xs font-medium text-gray-300">{imageModelField.label}</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {imageModelField.options.map((opt) => {
-                        const isSelected = selectedImageModel === opt.value;
-                        return (
-                          <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
-                            <input
-                              type="radio"
-                              name={imageModelField.id}
-                              value={opt.value}
-                              checked={isSelected}
-                              onChange={() => {
-                                setSelectedImageModel(opt.value);
-                                onFieldChange(imageModelField.id, opt.value);
-                              }}
-                              className="sr-only"
-                            />
-                            <div className="flex items-center gap-2">
-                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
-                              <span className="text-sm font-medium text-gray-100">{opt.label}</span>
-                            </div>
-                          </label>
-                        );
-                      })}
+                  <div className="mt-2 flex flex-col gap-3">
+                    <div>
+                      <div className="mb-1 text-xs font-light text-gray-300">{imageModelField.label}</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {imageModelField.options.map((opt) => {
+                          const isSelected = selectedImageModel === opt.value;
+                          return (
+                            <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
+                              <input
+                                type="radio"
+                                name={imageModelField.id}
+                                value={opt.value}
+                                checked={isSelected}
+                                onChange={() => {
+                                  setSelectedImageModel(opt.value);
+                                  onFieldChange(imageModelField.id, opt.value);
+                                }}
+                                className="sr-only"
+                              />
+                              <div className="flex items-center gap-2">
+                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
+                                <span className="text-sm font-medium text-gray-100">{opt.label}</span>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-xs font-light text-gray-300">{styleField.label}</div>
+                      <div className="flex flex-row flex-wrap gap-1">
+                        {styleField.options.map((opt) => {
+                          const isSelected = style === opt.value;
+                          return (
+                            <label key={opt.value} className="cursor-pointer">
+                              <input
+                                type="radio"
+                                name={styleField.id}
+                                value={opt.value}
+                                checked={isSelected}
+                                onChange={() => {
+                                  setStyle(opt.value);
+                                  onFieldChange(styleField.id, opt.value);
+                                }}
+                                className="sr-only"
+                              />
+                              <span className={`inline-block rounded-full border px-4 py-1 text-sm ${isSelected ? 'border-[#C255FF] bg-[#1A1A24] font-semibold text-white' : 'border-neutral-700 text-gray-300'}`}>{opt.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -215,6 +257,7 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
                     <path
                       d="M16 5H22M19 2V8M21 11.5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H12.5M21 14.9999L17.914 11.9139C17.5389 11.539 17.0303 11.3284 16.5 11.3284C15.9697 11.3284 15.4611 11.539 15.086 11.9139L6 20.9999M11 9C11 10.1046 10.1046 11 9 11C7.89543 11 7 10.1046 7 9C7 7.89543 7.89543 7 9 7C10.1046 7 11 7.89543 11 9Z"
                       stroke="white"
+                      strokeWidth="2"
                     />
                   </svg>
                 </div>
@@ -251,7 +294,6 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
             )}
 
             <input ref={fileInputRef} type="file" accept={field.accept} multiple={(field.maxFiles ?? 1) > 1} onChange={handleFileChange} className="hidden" />
-            <p className="mt-2 text-[11px] text-gray-500">이미지가 없어도 생성할 수 있어요! 텍스트만으로도 원하는 결과물을 만들어 드려요.</p>
           </div>
         )}
       </div>

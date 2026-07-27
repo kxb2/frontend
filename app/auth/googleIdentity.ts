@@ -20,7 +20,7 @@ export function loadGoogleIdentityScript(): Promise<void> {
   return loadPromise;
 }
 
-// initialize()는 페이지 생애주기에 한 번만
+// initialize()는 페이지 생애주기에 한 번만 -- 여러 번 부르면 "마지막 것만 유효"라는 GSI 경고가 뜸
 let initialized = false;
 let currentCredentialHandler: ((idToken: string) => void) | null = null;
 
@@ -31,5 +31,6 @@ export function initializeGoogleIdentity(clientId: string, onCredential: (idToke
   window.google!.accounts.id.initialize({
     client_id: clientId,
     callback: (response) => currentCredentialHandler?.(response.credential),
+    use_fedcm_for_prompt: true,
   });
 }

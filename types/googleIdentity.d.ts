@@ -5,8 +5,8 @@ declare global {
     google?: {
       accounts: {
         id: {
-          initialize(config: { client_id: string; callback: (response: { credential: string }) => void }): void;
-          renderButton(parent: HTMLElement, options: { type?: 'standard' | 'icon'; theme?: string; size?: string; width?: number }): void;
+          initialize(config: { client_id: string; callback: (response: { credential: string }) => void; use_fedcm_for_prompt?: boolean }): void;
+          prompt(momentListener?: (notification: { isDismissedMoment(): boolean; isSkippedMoment(): boolean; isNotDisplayed(): boolean }) => void): void;
         };
       };
     };

@@ -1,16 +1,5 @@
 // 타입 가져오기
-import {
-  CreateStoryboardResult,
-  GenerationResult,
-  IntegratedPromptResult,
-  ExportRequestResult,
-  ExportStatusResult,
-  RegenerationRequestResult,
-  RegenerationStatusResult,
-  StoryboardListItem,
-  StoryboardDetailResult,
-  StoryboardTitleResult,
-} from '@/types/api';
+import { CreateStoryboardResult, GenerationResult, IntegratedPromptResult, ExportRequestResult, ExportStatusResult, RegenerationRequestResult, RegenerationStatusResult, StoryboardListItem, StoryboardDetailResult, StoryboardTitleResult } from '@/types/api';
 import { authorizedFetch } from '@/app/api/http';
 
 // 스토리보드 생성 요청 (POST /storyboards)
@@ -27,7 +16,7 @@ export async function createStoryboard(formValues: Record<string, string | File[
   formData.append('genre', (formValues.genre as string) ?? '');
 
   // 선택 필드(값이 있을 때만 전송)
-  // if (formValues.style) formData.append('style', formValues.style as string);
+  if (formValues.style) formData.append('style', formValues.style as string);
   // if (formValues.tone) formData.append('tone', formValues.tone as string);
   // if (formValues.aspectRatio) formData.append('aspect_ratio', formValues.aspectRatio as string);
   // if (formValues.era) formData.append('era', formValues.era as string);

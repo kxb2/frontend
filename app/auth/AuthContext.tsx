@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, refreshTokens, getMe } from '@/app/api/auth/api';
+import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, logoutBeacon, refreshTokens, getMe } from '@/app/api/auth/api';
 import { getRefreshToken, setAuthTokens, clearTokens } from '@/app/auth/tokenStore';
 import LoginModal from '@/app/auth/LoginModal';
 import type { AuthResult, AuthUser } from '@/types/auth';
@@ -86,9 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    // 하드 리로드로 페이지가 곧 사라지므로, 요청이 잘리지 않도록 서버 통지를 먼저 끝내고 나서 이동
+    // 로그아웃 시 로딩 실패 화면이 노출되는 문제 해결
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#111119;';
+    document.body.appendChild(overlay);
+
+    // sendBeacon으로 응답을 기다리지 않고 바로 이동
     const currentRefreshToken = getRefreshToken();
-    if (currentRefreshToken) {
+    if (currentRefreshToken && !logoutBeacon(currentRefreshToken)) {
       try {
         await apiLogout(currentRefreshToken);
       } catch (error) {
@@ -117,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {authModalMode && (
         <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/64 p-4" onClick={closeAuthModal}>
           <div onClick={(e) => e.stopPropagation()}>
-            <LoginModal initialMode={authModalMode} onClose={closeAuthModal} />
+            <LoginModal initialMode={authModalMode} />
           </div>
         </div>
       )}

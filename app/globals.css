@@ -70,7 +70,7 @@ input:-webkit-autofill:focus {
   box-shadow: 0 0 0px 1000px var(--color-surface) inset;
   transition: background-color 999999s ease-in-out 0s;
   font-family: inherit;
-  font-size: var(--text-title-medium);
-  font-weight: var(--text-title-medium--font-weight);
-  line-height: var(--text-title-medium--line-height);
+  font-size: var(--text-caption-14);
+  font-weight: var(--text-caption-14--font-weight);
+  line-height: var(--text-caption-14--line-height);
 }
