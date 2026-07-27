@@ -6,15 +6,13 @@ export const storyboardFields: StoryBoardField[] = [
     id: 'scenario',
     type: 'textarea',
     label: '시나리오 입력',
-    description: '영상이나 이미지로 만들고 싶은 이야기를 자유롭게 입력해주세요.',
-    placeholder: '시나리오를 입력해주세요.',
+    placeholder: '영상이나 이미지로 만들고 싶은 이야기를 자유롭게 입력해주세요.',
     maxLength: 1000,
   },
   {
     id: 'genre',
     type: 'select',
     label: '분위기 선택',
-    description: '분위기나 장르를 선택해주세요.',
     options: [
       { label: '드라마', value: '드라마' },
       { label: '로맨스', value: '로맨스' },
@@ -27,7 +25,7 @@ export const storyboardFields: StoryBoardField[] = [
     id: 'reference',
     type: 'fileUpload',
     label: '참고 이미지 (선택)',
-    description: '캐릭터, 배경, 소품 등 참고할 이미지를 추가할 수 있어요. (최대 10장)',
+    description: '텍스트로도 생성할 수 있지만, 참고 이미지를 넣으면 퀄리티가 훨씬 좋아져요.',
     accept: 'image/*',
     maxFiles: 10,
   },
@@ -44,4 +42,16 @@ export const imageModelField: StoryBoardField & { type: 'modelSelect' } = {
     { label: 'Nano Banana 2', value: 'gemini_3_1_flash_image', description: 'Gemini 3.1 최신 이미지 생성 모델' },
   ],
   defaultValue: 'gpt_image',
+};
+
+// 그림체(스타일) 선택(2번 분위기 선택 카드의 '고급 옵션'에서 노출됨)
+export const styleField: StoryBoardField & { type: 'select' } = {
+  id: 'style',
+  type: 'select',
+  label: '그림체(스타일)',
+  options: [
+    { label: '실사화', value: '실사화' },
+    { label: '2D 애니메이션', value: '2D 애니메이션' },
+    { label: '3D 애니메이션', value: '3D 애니메이션' },
+  ],
 };

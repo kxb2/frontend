@@ -47,12 +47,12 @@ export default function PromptBox({ promptText, isLoading }: PromptBoxProps) {
       </div>
 
       {isLoading && !promptText ? (
-        // 생성 중이고 아직 통합 프롬프트가 없으면 스켈레톤 표시
-        <div className="mt-3 rounded-lg border border-border bg-surface p-3">
+        // 생성 중이고 아직 통합 프롬프트가 없으면 스켈레톤 표시(placeholder 상태와 높이를 맞추기 위해 min-h-24 공통 적용)
+        <div className="mt-3 min-h-24 rounded-lg border border-border bg-surface p-3">
           <Skeleton count={3} width="95%" baseColor="#3a3c41" highlightColor="#ffffff1a" duration={2.5} />
         </div>
       ) : (
-        <div className={`mt-3 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${isExpanded ? '' : 'line-clamp-3'}`}>{promptText ?? '프롬프트'}</div>
+        <div className={`mt-3 min-h-24 whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary ${promptText ? '' : 'font-extralight'} ${isExpanded ? '' : 'line-clamp-3'}`}>{promptText ?? '프롬프트가 제공되는 공간입니다.'}</div>
       )}
 
       <button type="button" onClick={() => setIsExpanded((prev) => !prev)} disabled={!promptText} className="mt-2 text-xs text-text-secondary disabled:cursor-not-allowed disabled:opacity-40">
