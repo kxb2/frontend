@@ -36,8 +36,8 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-background sticky top-0 z-55 flex h-15 w-full shrink-0 items-center justify-between gap-2.5 px-3">
-        <div className="flex items-center gap-5">
+      <header className="bg-background sticky top-0 z-55 flex h-15 w-full shrink-0 items-start justify-between p-3">
+        <div className="flex h-full shrink-0 items-center gap-2">
           <button
             type="button"
             aria-label="메뉴"
@@ -46,37 +46,38 @@ export default function Header() {
               if (!requireAuth()) return;
               setIsMenuOpen((prev) => !prev);
             }}
-            className="text-text-primary size-6 shrink-0 cursor-pointer"
+            className="text-text-primary flex size-9 shrink-0 cursor-pointer items-center justify-center"
           >
             <MenuIcon className="size-6" />
           </button>
-          <Link href="/" className="flex shrink-0 items-center gap-2">
-            <Image src={logoMark} alt="" className="size-10" priority />
-            <Image src={logoText} alt="GeNova" className="h-[22.862px] w-25.5" priority />
+          <Link href="/" className="flex shrink-0 items-center gap-1">
+            <Image src={logoMark} alt="" className="size-6" priority />
+            <Image src={logoText} alt="GeNova" className="h-4.5 w-20" priority />
           </Link>
         </div>
 
-        <nav className="flex items-center gap-17.5">
-          {NAV_LINKS.map(({ href, label }) => {
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={(e) => {
-                  if (PROTECTED_PATHS.includes(href) && !requireAuth()) e.preventDefault();
-                }}
-                className={`flex flex-col items-center ${isActive ? 'text-label-semibold-16 text-text-primary' : 'text-body text-text-disabled'}`}
-              >
-                {label}
-                <span className={`mt-1 h-px w-full ${isActive ? 'bg-white' : 'bg-transparent'}`} />
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex h-full flex-1 flex-col items-center justify-center p-2.5">
+          <nav className="flex items-center gap-5">
+            {NAV_LINKS.map(({ href, label }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={(e) => {
+                    if (PROTECTED_PATHS.includes(href) && !requireAuth()) e.preventDefault();
+                  }}
+                  className={`rounded-2xl px-3 py-1 ${isActive ? 'bg-white/8 text-label-semibold-16 text-text-primary' : 'text-body text-text-disabled'}`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
         {user ? (
-          <div className="relative flex items-center gap-5" ref={profileMenuRef}>
+          <div className="relative flex h-9 shrink-0 items-center gap-5" ref={profileMenuRef}>
             <BellIcon className="text-text-disabled size-6 shrink-0" />
             <button type="button" aria-label="프로필" onClick={() => setIsProfileMenuOpen((prev) => !prev)} className="border-secondary flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border">
               <div className="bg-text-primary size-6 rounded-full" />
@@ -101,8 +102,8 @@ export default function Header() {
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={() => openAuthModal('login')} className="text-label-regular-14 cursor-pointer text-text-primary">
+          <div className="flex h-9 shrink-0 items-center gap-4">
+            <button type="button" onClick={() => openAuthModal('login')} className="text-label-regular-14 cursor-pointer rounded-2xl px-2 py-1 text-text-primary">
               Login
             </button>
             <button type="button" onClick={() => openAuthModal('signup')} className="bg-secondary text-card-secondary text-label-regular-14 cursor-pointer rounded-2xl px-2 py-1">

@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${inter.variable} ${pretendard.variable}`}>
-      <body className="flex h-screen flex-col">
+      <body className="bg-background flex h-screen flex-col">
         <AuthProvider>
           <AuthGate>
             <Header />
