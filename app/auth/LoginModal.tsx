@@ -30,24 +30,55 @@ function GoogleSignInButton({ onCredential, onUnavailable, disabled }: { onCrede
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !overlayRef.current) return;
     let cancelled = false;
+    const resizeObservers: ResizeObserver[] = [];
+    let mutationObserver: MutationObserver | null = null;
     loadGoogleIdentityScript()
       .then(() => {
         if (cancelled || !overlayRef.current || !window.google) return;
         initializeGoogleIdentity(GOOGLE_CLIENT_ID, (idToken) => onCredentialRef.current(idToken));
         window.google.accounts.id.renderButton(overlayRef.current, { type: 'standard', size: 'large', width: 400 });
-        const rendered = overlayRef.current.firstElementChild as HTMLElement | null;
-        if (rendered) {
-          const renderedRect = rendered.getBoundingClientRect();
-          const containerRect = overlayRef.current.getBoundingClientRect();
-          if (renderedRect.width > 0 && renderedRect.height > 0) {
-            rendered.style.transformOrigin = 'top left';
-            rendered.style.transform = `scale(${containerRect.width / renderedRect.width}, ${containerRect.height / renderedRect.height})`;
+        const container = overlayRef.current;
+
+        // 버튼 전체가 클릭되도록 transform:scale로 실제 크기 자체를 늘림
+        function attachScaleTo(el: HTMLElement) {
+          function applyScale() {
+            // offsetWidth/Height는 transform 영향을 안 받는 원래 레이아웃 크기라, 이미 적용된 scale과 무관하게 정확히 잼
+            const w = el.offsetWidth;
+            const h = el.offsetHeight;
+            if (w > 0 && h > 0) {
+              el.style.transformOrigin = 'top left';
+              el.style.transform = `scale(${container.offsetWidth / w}, ${container.offsetHeight / h})`;
+            }
           }
+          applyScale();
+          const observer = new ResizeObserver(applyScale);
+          observer.observe(el);
+          resizeObservers.push(observer);
+        }
+
+        // 실제 클릭 요소(role="button")를 직접 잡아야 함
+        const nativeButton = container.querySelector<HTMLElement>('[role="button"]');
+        if (nativeButton) attachScaleTo(nativeButton);
+
+        const existingIframe = container.querySelector('iframe');
+        if (existingIframe) {
+          attachScaleTo(existingIframe);
+        } else {
+          mutationObserver = new MutationObserver(() => {
+            const iframe = container.querySelector('iframe');
+            if (iframe) {
+              mutationObserver?.disconnect();
+              attachScaleTo(iframe);
+            }
+          });
+          mutationObserver.observe(container, { childList: true, subtree: true });
         }
       })
       .catch((error) => console.error('Google 로그인 스크립트 로드 실패:', error));
     return () => {
       cancelled = true;
+      resizeObservers.forEach((observer) => observer.disconnect());
+      mutationObserver?.disconnect();
     };
   }, []);
 
@@ -62,7 +93,7 @@ function GoogleSignInButton({ onCredential, onUnavailable, disabled }: { onCrede
         <Image src={googleLogo} alt="" className="size-6" />
         Google 계정으로 로그인
       </button>
-      {GOOGLE_CLIENT_ID && !disabled && <div ref={overlayRef} className="absolute inset-0 overflow-hidden opacity-0" />}
+      {GOOGLE_CLIENT_ID && !disabled && <div ref={overlayRef} className="absolute inset-0 cursor-pointer overflow-hidden opacity-0" />}
     </div>
   );
 }
