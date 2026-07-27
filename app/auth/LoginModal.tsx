@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/auth/AuthContext';
+import { loadGoogleIdentityScript, initializeGoogleIdentity } from '@/app/auth/googleIdentity';
 import XIcon from '@/app/components/icons/x.svg';
 import EyeIcon from '@/app/components/icons/eye.svg';
 import EyeOffIcon from '@/app/components/icons/eye-off.svg';
@@ -18,9 +19,13 @@ import hero4 from '@/app/auth/images/hero-4.png';
 const HERO_IMAGES = [hero1, hero2, hero3, hero4];
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-// FedCM(navigator.credentials.get)으로 우리 버튼의 진짜 클릭에서 바로 idToken을 받음
+// GIS 공식 라이브러리(initialize + prompt)로 우리 버튼의 진짜 클릭에서 idToken을 받음.
 function GoogleSignInButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
   const [isRequesting, setIsRequesting] = useState(false);
+  const onCredentialRef = useRef(onCredential);
+  useEffect(() => {
+    onCredentialRef.current = onCredential;
+  });
 
   async function handleClick() {
     if (!GOOGLE_CLIENT_ID) {
@@ -29,16 +34,20 @@ function GoogleSignInButton({ onCredential, disabled }: { onCredential: (idToken
     }
     setIsRequesting(true);
     try {
-      const credential = await navigator.credentials.get({
-        identity: { providers: [{ configURL: 'https://accounts.google.com/gsi/fedcm.json', clientId: GOOGLE_CLIENT_ID }] },
+      await loadGoogleIdentityScript();
+      if (!window.google) throw new Error('Google 로그인 스크립트를 불러오지 못했습니다.');
+      initializeGoogleIdentity(GOOGLE_CLIENT_ID, (idToken) => {
+        setIsRequesting(false);
+        onCredentialRef.current(idToken);
       });
-      const idToken = (credential as IdentityCredential | null)?.token;
-      if (idToken) onCredential(idToken);
+      window.google.accounts.id.prompt((notification) => {
+        // 계정 선택 창이 안 뜨거나 사용자가 닫은 경우엔 로딩 상태만 해제(에러 아님)
+        if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+          setIsRequesting(false);
+        }
+      });
     } catch (error) {
-      // 사용자가 계정 선택 창을 닫은 경우(AbortError/NotAllowedError)는 정상적인 흐름이라 조용히 무시
-      const cancelled = error instanceof DOMException && (error.name === 'AbortError' || error.name === 'NotAllowedError');
-      if (!cancelled) console.error('Google 로그인 실패:', error);
-    } finally {
+      console.error('Google 로그인 실패:', error);
       setIsRequesting(false);
     }
   }
