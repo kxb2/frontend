@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FormField from '@/app/components/FormField';
 import { storyboardFields } from '@/app/data/storyboardFields';
-// import ImageGrid from '@/app/storyboard/image/imagegrid';
+
 import ImageSingle from '@/app/storyboard/image/imagesingle';
 import PromptBox from '@/app/storyboard/promptbox/propmptbox';
 import ReadStoryboard from '@/app/storyboard/ReadStoryboard';
@@ -17,7 +17,7 @@ import { GenerationResult, StoryboardDetailResult } from '@/types/api';
 // page.tsx
 export default function Storyboard() {
   return (
-    <Suspense fallback={<div className="flex h-screen flex-col bg-background text-text-primary" />}>
+    <Suspense fallback={<div className="flex flex-1 min-h-0 flex-col bg-background text-text-primary" />}>
       <StoryboardInner />
     </Suspense>
   );
@@ -256,13 +256,13 @@ function StoryboardInner() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background text-text-primary">
+    <div className="flex flex-1 min-h-0 flex-col bg-background text-text-primary">
       <div className="flex flex-1 min-h-0 p-2 gap-4">
         <div className="min-w-100 w-1/4 shrink-0 relative flex flex-col rounded-2xl p-4 text-text-primary">
           {/* 필드 영역만 자체적으로 스크롤됨. pb-16으로 버튼에 안 가리도록 아래 여백 확보 */}
           <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto pb-16 pr-2 scrollbar-thin [scrollbar-color:#3f3f46_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-track]:bg-transparent">
             <div>
-              <h2 className="text-base text-[28px] font-semibold bg-linear-to-r from-primary to-[#f3e9a1] bg-clip-text text-transparent">
+              <h2 className="text-base text-[28px] text-white font-semibold bg-linear-to-r leading-8">
                 {viewedStoryboard ? (
                   (viewedStoryboard.title ?? `Storyboard ${viewedStoryboard.id}`)
                 ) : (
