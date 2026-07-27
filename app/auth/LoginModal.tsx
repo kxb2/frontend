@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/auth/AuthContext';
-import { loadGoogleIdentityScript, initializeGoogleIdentity } from '@/app/auth/googleIdentity';
 import XIcon from '@/app/components/icons/x.svg';
 import EyeIcon from '@/app/components/icons/eye.svg';
 import EyeOffIcon from '@/app/components/icons/eye-off.svg';
@@ -19,82 +18,41 @@ import hero4 from '@/app/auth/images/hero-4.png';
 const HERO_IMAGES = [hero1, hero2, hero3, hero4];
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-// 커스텀 버튼 모양은 유지하고, 그 위에 투명한 실제 Google 버튼(iframe)을 겹쳐서 클릭을 가로챔
-function GoogleSignInButton({ onCredential, onUnavailable, disabled }: { onCredential: (idToken: string) => void; onUnavailable: () => void; disabled?: boolean }) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const onCredentialRef = useRef(onCredential);
-  useEffect(() => {
-    onCredentialRef.current = onCredential;
-  });
+// FedCM(navigator.credentials.get)으로 우리 버튼의 진짜 클릭에서 바로 idToken을 받음
+function GoogleSignInButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
+  const [isRequesting, setIsRequesting] = useState(false);
 
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !overlayRef.current) return;
-    let cancelled = false;
-    const resizeObservers: ResizeObserver[] = [];
-    let mutationObserver: MutationObserver | null = null;
-    loadGoogleIdentityScript()
-      .then(() => {
-        if (cancelled || !overlayRef.current || !window.google) return;
-        initializeGoogleIdentity(GOOGLE_CLIENT_ID, (idToken) => onCredentialRef.current(idToken));
-        window.google.accounts.id.renderButton(overlayRef.current, { type: 'standard', size: 'large', width: 400 });
-        const container = overlayRef.current;
-
-        // 버튼 전체가 클릭되도록 transform:scale로 실제 크기 자체를 늘림
-        function attachScaleTo(el: HTMLElement) {
-          function applyScale() {
-            // offsetWidth/Height는 transform 영향을 안 받는 원래 레이아웃 크기라, 이미 적용된 scale과 무관하게 정확히 잼
-            const w = el.offsetWidth;
-            const h = el.offsetHeight;
-            if (w > 0 && h > 0) {
-              el.style.transformOrigin = 'top left';
-              el.style.transform = `scale(${container.offsetWidth / w}, ${container.offsetHeight / h})`;
-            }
-          }
-          applyScale();
-          const observer = new ResizeObserver(applyScale);
-          observer.observe(el);
-          resizeObservers.push(observer);
-        }
-
-        // 실제 클릭 요소(role="button")를 직접 잡아야 함
-        const nativeButton = container.querySelector<HTMLElement>('[role="button"]');
-        if (nativeButton) attachScaleTo(nativeButton);
-
-        const existingIframe = container.querySelector('iframe');
-        if (existingIframe) {
-          attachScaleTo(existingIframe);
-        } else {
-          mutationObserver = new MutationObserver(() => {
-            const iframe = container.querySelector('iframe');
-            if (iframe) {
-              mutationObserver?.disconnect();
-              attachScaleTo(iframe);
-            }
-          });
-          mutationObserver.observe(container, { childList: true, subtree: true });
-        }
-      })
-      .catch((error) => console.error('Google 로그인 스크립트 로드 실패:', error));
-    return () => {
-      cancelled = true;
-      resizeObservers.forEach((observer) => observer.disconnect());
-      mutationObserver?.disconnect();
-    };
-  }, []);
+  async function handleClick() {
+    if (!GOOGLE_CLIENT_ID) {
+      alert('Google 로그인은 준비 중입니다. 이메일로 로그인/회원가입해주세요.');
+      return;
+    }
+    setIsRequesting(true);
+    try {
+      const credential = await navigator.credentials.get({
+        identity: { providers: [{ configURL: 'https://accounts.google.com/gsi/fedcm.json', clientId: GOOGLE_CLIENT_ID }] },
+      });
+      const idToken = (credential as IdentityCredential | null)?.token;
+      if (idToken) onCredential(idToken);
+    } catch (error) {
+      // 사용자가 계정 선택 창을 닫은 경우(AbortError/NotAllowedError)는 정상적인 흐름이라 조용히 무시
+      const cancelled = error instanceof DOMException && (error.name === 'AbortError' || error.name === 'NotAllowedError');
+      if (!cancelled) console.error('Google 로그인 실패:', error);
+    } finally {
+      setIsRequesting(false);
+    }
+  }
 
   return (
-    <div className="relative h-18.75 w-full">
-      <button
-        type="button"
-        onClick={onUnavailable}
-        disabled={disabled}
-        className="text-title-medium flex h-18.75 w-full cursor-pointer items-center justify-center gap-2.5 rounded-2xl border border-border-divider bg-text-primary text-background disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <Image src={googleLogo} alt="" className="size-6" />
-        Google 계정으로 로그인
-      </button>
-      {GOOGLE_CLIENT_ID && !disabled && <div ref={overlayRef} className="absolute inset-0 cursor-pointer overflow-hidden opacity-0" />}
-    </div>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled || isRequesting}
+      className="text-title-medium flex h-18.75 w-full cursor-pointer items-center justify-center gap-2.5 rounded-2xl border border-border-divider bg-text-primary text-background disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <Image src={googleLogo} alt="" className="size-6" />
+      {isRequesting ? '연결 중...' : 'Google 계정으로 로그인'}
+    </button>
   );
 }
 
@@ -156,11 +114,6 @@ export default function LoginModal({ onClose, initialMode = 'login' }: LoginModa
   function switchMode(next: 'login' | 'signup') {
     setMode(next);
     setErrorMessage(null);
-  }
-
-  // Client ID 없을 때만 노출되는 안내
-  function handleGoogleUnavailable() {
-    alert('Google 로그인은 준비 중입니다. 이메일로 로그인/회원가입해주세요.');
   }
 
   async function runAuthAction(action: () => Promise<void>, fallbackMessage: string) {
@@ -234,7 +187,7 @@ export default function LoginModal({ onClose, initialMode = 'login' }: LoginModa
 
           {mode === 'login' ? (
             <form onSubmit={handleLoginSubmit} className="flex w-full flex-col items-center gap-3">
-              <GoogleSignInButton onCredential={handleGoogleCredential} onUnavailable={handleGoogleUnavailable} disabled={isSubmitting} />
+              <GoogleSignInButton onCredential={handleGoogleCredential} disabled={isSubmitting} />
 
               <p className="text-caption-14 text-white">또는</p>
 
