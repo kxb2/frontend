@@ -43,3 +43,15 @@ export const imageModelField: StoryBoardField & { type: 'modelSelect' } = {
   ],
   defaultValue: 'gpt_image',
 };
+
+// 그림체(스타일) 선택(2번 분위기 선택 카드의 '고급 옵션'에서 노출됨)
+export const styleField: StoryBoardField & { type: 'select' } = {
+  id: 'style',
+  type: 'select',
+  label: '그림체(스타일)',
+  options: [
+    { label: '실사', value: 'realistic' },
+    { label: '2D', value: '2d' },
+    { label: '3D', value: '3d' },
+  ],
+};

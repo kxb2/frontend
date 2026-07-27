@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { StoryBoardField } from '@/types/input';
-import { imageModelField } from '@/app/data/storyboardFields';
+import { imageModelField, styleField } from '@/app/data/storyboardFields';
 
 interface Props {
   field: StoryBoardField;
@@ -35,8 +35,8 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
   // 고급 옵션(이미지 생성 모델 선택) 펼침 여부 - genre 필드에서만 사용
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-  // // 고급설정 값들
-  // const [style, setStyle] = useState(''); // 그림체(스타일)
+  // 고급설정 값들
+  const [style, setStyle] = useState(styleField.options[0]?.value ?? ''); // 그림체(스타일) 기본값: 실사
   // const [tone, setTone] = useState(''); // 톤
   // const [aspectRatio, setAspectRatio] = useState(''); // 시대 배경
   // const [era, setEra] = useState(''); // 화면비
@@ -50,10 +50,10 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
 
   // 마운트 시 기본 선택값을 부모(formValues)에도 반영
   useEffect(() => {
-    if (field.id === 'genre' && selectedImageModel) {
-      onFieldChange(imageModelField.id, selectedImageModel);
+    if (field.id === 'genre') {
+      if (selectedImageModel) onFieldChange(imageModelField.id, selectedImageModel);
+      if (style) onFieldChange(styleField.id, style);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 파일 목록을 받아 미리보기에 추가하는 공용 함수(input 선택 / 드래그앤드롭 공용)
@@ -174,31 +174,57 @@ export default function StoryboardFormField({ field, onFieldChange }: Props) {
                 </button>
 
                 {isAdvancedOpen && (
-                  <div className="mt-2">
-                    <div className="mb-1 text-xs font-light text-gray-300">{imageModelField.label}</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {imageModelField.options.map((opt) => {
-                        const isSelected = selectedImageModel === opt.value;
-                        return (
-                          <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
-                            <input
-                              type="radio"
-                              name={imageModelField.id}
-                              value={opt.value}
-                              checked={isSelected}
-                              onChange={() => {
-                                setSelectedImageModel(opt.value);
-                                onFieldChange(imageModelField.id, opt.value);
-                              }}
-                              className="sr-only"
-                            />
-                            <div className="flex items-center gap-2">
-                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
-                              <span className="text-sm font-medium text-gray-100">{opt.label}</span>
-                            </div>
-                          </label>
-                        );
-                      })}
+                  <div className="mt-2 flex flex-col gap-3">
+                    <div>
+                      <div className="mb-1 text-xs font-light text-gray-300">{imageModelField.label}</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {imageModelField.options.map((opt) => {
+                          const isSelected = selectedImageModel === opt.value;
+                          return (
+                            <label key={opt.value} className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-2 transition-colors ${isSelected ? 'border-[#C255FF] bg-[#1A1A24]' : 'border-neutral-700'}`}>
+                              <input
+                                type="radio"
+                                name={imageModelField.id}
+                                value={opt.value}
+                                checked={isSelected}
+                                onChange={() => {
+                                  setSelectedImageModel(opt.value);
+                                  onFieldChange(imageModelField.id, opt.value);
+                                }}
+                                className="sr-only"
+                              />
+                              <div className="flex items-center gap-2">
+                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C255FF]' : 'border-neutral-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-[#C255FF]" />}</span>
+                                <span className="text-sm font-medium text-gray-100">{opt.label}</span>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-xs font-light text-gray-300">{styleField.label}</div>
+                      <div className="flex flex-row flex-wrap gap-1">
+                        {styleField.options.map((opt) => {
+                          const isSelected = style === opt.value;
+                          return (
+                            <label key={opt.value} className="cursor-pointer">
+                              <input
+                                type="radio"
+                                name={styleField.id}
+                                value={opt.value}
+                                checked={isSelected}
+                                onChange={() => {
+                                  setStyle(opt.value);
+                                  onFieldChange(styleField.id, opt.value);
+                                }}
+                                className="sr-only"
+                              />
+                              <span className={`inline-block rounded-full border px-4 py-1 text-sm ${isSelected ? 'border-[#C255FF] bg-[#1A1A24] font-semibold text-white' : 'border-neutral-700 text-gray-300'}`}>{opt.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
