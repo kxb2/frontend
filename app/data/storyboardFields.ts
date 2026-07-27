@@ -50,8 +50,8 @@ export const styleField: StoryBoardField & { type: 'select' } = {
   type: 'select',
   label: '그림체(스타일)',
   options: [
-    { label: '실사', value: 'realistic' },
-    { label: '2D', value: '2d' },
-    { label: '3D', value: '3d' },
+    { label: '실사화', value: '실사화' },
+    { label: '2D 애니메이션', value: '2D 애니메이션' },
+    { label: '3D 애니메이션', value: '3D 애니메이션' },
   ],
 };
