@@ -40,6 +40,8 @@ function StoryboardInner() {
   const [integratedPrompt, setIntegratedPrompt] = useState<string | null>(null);
   // 버튼 눌렀을 때 로딩 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 직전 생성 시도가 실패했는지 여부(실패 시에만 동일 조건으로 다시 생성하기 버튼을 활성화)
+  const [hasFailed, setHasFailed] = useState(false);
 
   // 내보내기 드롭다운(이미지/PDF 선택지)을 띄울지 여부
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -77,6 +79,7 @@ function StoryboardInner() {
       setStoryboardId(null);
       setGeneration(null);
       setIntegratedPrompt(null);
+      setHasFailed(false);
       router.replace('/storyboard');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- router는 고정이라 deps에 넣지 않음
@@ -160,11 +163,9 @@ function StoryboardInner() {
       return;
     }
 
-    // 일부(또는 전체) 컷이 실패해도 이미 완료된 컷은 있을 수 있으므로, 결과는 그대로 반영하고 알림만 띄움
+    // 그리드 이미지 1장 구조라 부분 실패 없이 전체 실패로 처리 -> catch에서 재생성 버튼을 활성화
     if (status === 'failed') {
-      setGeneration(result);
-      alert('이미지 생성을 일부 실패하였습니다.');
-      return;
+      throw new Error('이미지 생성에 실패했습니다.');
     }
 
     // 아직 진행 중이면 2초 뒤에 다시 확인(setTimeout 활용)
@@ -186,6 +187,7 @@ function StoryboardInner() {
 
     // 검증을 통과한 경우 로딩 상태 설정
     setIsSubmitting(true);
+    setHasFailed(false);
     try {
       // 스토리보드 생성 요청 후 폴링 함수 시작
       // 원래 변수명 : 새 변수명 형식으로 저장
@@ -198,6 +200,8 @@ function StoryboardInner() {
     } catch (error) {
       console.error(error);
       alert('스토리보드 생성에 실패했습니다.');
+      // 실패 시에는 formValues(같은 조건)를 그대로 둔 채 다시 생성하기 버튼만 활성화
+      setHasFailed(true);
     } finally {
       // 함수가 종료 되었다면 로딩 상태 해제
       setIsSubmitting(false);
@@ -289,8 +293,8 @@ function StoryboardInner() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
                   </svg>
-                  {/* 그리드 이미지 1장 구조로 바뀌면서, 재생성은 별도 엔드포인트가 정해지기 전까지 일단 비활성화 */}
-                  {isSubmitting ? '생성 중...' : generation && integratedPrompt ? '스토리보드 재생성하기' : '스토리보드 만들기'}
+                  {/* 정상 생성 후의 재생성은 별도 엔드포인트가 정해지기 전까지 비활성화. 실패했을 때만 같은 조건으로 다시 시도 가능 */}
+                  {isSubmitting ? '생성 중...' : hasFailed ? '다시 생성하기' : generation && integratedPrompt ? '생성 완료' : '스토리보드 만들기'}
                 </button>
                 <div className="flex flex-col gap-2">
                   {storyboardFields.map((field) => (
