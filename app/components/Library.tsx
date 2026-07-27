@@ -311,12 +311,14 @@ export default function Library({ isOpen, onClose }: LibraryProps) {
 
   return (
     <div className="bg-card scrollbar-none flex h-full w-101 flex-col overflow-y-auto rounded-r-xl">
-      <div className="flex w-full items-center gap-2 p-8">
-        <button type="button" aria-label="메뉴 닫기" onClick={onClose} className="text-text-primary size-6 shrink-0 cursor-pointer">
+      <div className="flex w-full items-center gap-2 p-3">
+        <button type="button" aria-label="메뉴 닫기" onClick={onClose} className="text-text-primary flex size-9 shrink-0 cursor-pointer items-center justify-center">
           <MenuIcon className="size-6" />
         </button>
-        <Image src={logoMark} alt="" className="size-6" />
-        <Image src={logoText} alt="GeNova" className="h-4.5 w-20" priority />
+        <div className="flex shrink-0 items-center gap-1">
+          <Image src={logoMark} alt="" className="size-6" />
+          <Image src={logoText} alt="GeNova" className="h-4.5 w-20" priority />
+        </div>
       </div>
 
       <div className="bg-border h-px w-full shrink-0" />
