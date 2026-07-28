@@ -5,6 +5,7 @@ import type Konva from 'konva';
 import { Circle, Group, Path, Rect, Text as KonvaText } from 'react-konva';
 import type { MemoCanvasItem, MemoViewMode } from '@/types/canvas';
 import { isItemListeningTool, isSelectTool, type Tool } from '@/app/canvas/_components/core/Toolbar';
+import { isShiftPressed, lockToDominantAxis } from '@/app/canvas/_components/core/utils';
 import type { MemoLiveResize, MemoResizeHandle } from '@/app/canvas/_components/tools/memo/useMemoResize';
 import {
   MEMO_ALL_CORNER_RADIUS,
@@ -19,6 +20,7 @@ import {
   MEMO_COUNTER_FONT_SIZE,
   MEMO_FILE_ICON_PATH,
   MEMO_HEADER_HEIGHT,
+  MEMO_HEADER_ICON_SCALE,
   MEMO_HEADER_PAD_X,
   MEMO_LINE_HEIGHT,
   MEMO_MAX_CHARS,
@@ -43,6 +45,7 @@ interface MemoItemProps {
   showIndividualBorder: boolean;
   isEditing: boolean;
   liveText?: string; // 메모 편집 중 textarea 실시간 입력된 값
+  isEditingTitle: boolean; // 메모 제목 편집 중에는 HTML input 오버레이를 띄움
   liveResize?: MemoLiveResize; // 메모 테두리 크기 조절 중 실시간 폭/높이/위치
   onSelect: (e: Konva.KonvaEventObject<MouseEvent>, item: MemoCanvasItem) => void;
   onConnectorStart: (e: Konva.KonvaEventObject<MouseEvent>, item: MemoCanvasItem) => void;
@@ -52,9 +55,11 @@ interface MemoItemProps {
   onGestureEnd: () => void;
   onLiveChange: (item: MemoCanvasItem) => void;
   onItemDblClick: (item: MemoCanvasItem) => void;
+  onTitleDblClick: (item: MemoCanvasItem, currentDisplayTitle: string) => void;
   onMemoLiveOverride: (id: string, value: MemoLiveResize | null) => void; // 일반 다중선택 리사이즈 중 내용 기준 실시간 크기를 신고
   registerNode: (id: string, node: Konva.Group | null) => void;
   registerEditableNode: (id: string, node: Konva.Node | null) => void;
+  registerTitleNode: (id: string, node: Konva.Node | null) => void;
   registerMenuNode: (id: string, node: Konva.Group | null) => void;
 }
 
@@ -66,6 +71,7 @@ export default function MemoItem({
   showIndividualBorder,
   isEditing,
   liveText,
+  isEditingTitle,
   liveResize,
   onSelect,
   onConnectorStart,
@@ -75,16 +81,23 @@ export default function MemoItem({
   onGestureEnd,
   onLiveChange,
   onItemDblClick,
+  onTitleDblClick,
   onMemoLiveOverride,
   registerNode,
   registerEditableNode,
+  registerTitleNode,
   registerMenuNode,
 }: MemoItemProps) {
   const groupRef = useRef<Konva.Group>(null);
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   function setGroupRef(node: Konva.Group | null) {
     groupRef.current = node;
     registerNode(item.id, node);
+  }
+
+  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
+    dragStartPosRef.current = { x: e.target.x(), y: e.target.y() };
   }
 
   // 커넥터/선택 툴에 따라 이벤트 분기
@@ -103,7 +116,8 @@ export default function MemoItem({
   // 세로 조절 로직 (메모 본문)
   const textForSizing = isEditing && liveText !== undefined ? liveText : item.text;
   const naturalContentHeight = useMemo(() => measureMemo(textForSizing, contentWidth), [textForSizing, contentWidth]); // 텍스트/폭이 그대로면 재계산을 건너뛰도록 메모이즈
-  const contentHeight = liveResize?.height ?? item.height ?? naturalContentHeight;
+  // 편집 중에는 저장된 높이 대신 타이핑되는 내용에 맞춰 실시간으로 늘어나거나 줄어듦
+  const contentHeight = liveResize?.height ?? (isEditing ? naturalContentHeight : (item.height ?? naturalContentHeight));
   const [scrollOffset, setScrollOffset] = useState(0);
   const maxScroll = Math.max(0, naturalContentHeight - contentHeight);
   const effectiveScroll = Math.min(scrollOffset, maxScroll);
@@ -113,7 +127,9 @@ export default function MemoItem({
     e.evt.preventDefault();
     setScrollOffset((prev) => Math.min(maxScroll, Math.max(0, prev + e.evt.deltaY)));
   }
-  const title = `메모 ${String(item.seq).padStart(3, '0')}`;
+  // 직접 지정한 제목이 있으면 그걸, 없으면 seq 기준 자동 번호 제목을 보여줌
+  const autoTitle = `메모 ${String(item.seq).padStart(3, '0')}`;
+  const displayTitle = item.title?.trim() ? item.title : autoTitle;
   const headerHeight = MEMO_HEADER_HEIGHT;
   // 편집 중에는 접힘 모드여도 항상 전체 보기로 전환
   const effectiveViewMode: MemoViewMode = isEditing ? 'full' : item.viewMode;
@@ -123,12 +139,14 @@ export default function MemoItem({
 
   // 메모 헤더 레이아웃
   const headerMargin = MEMO_HEADER_PAD_X * ratio;
-  const iconTitleGap = 8 * ratio;
-  const toggleDotsGap = 8 * ratio;
+  const iconTitleGap = 16 * ratio;
+  const toggleDotsGap = 18 * ratio;
   const iconX = headerMargin;
-  const titleX = headerMargin + 12 + iconTitleGap;
+  const iconRightEdge = iconX + 6 * (1 + MEMO_HEADER_ICON_SCALE);
+  const titleX = iconRightEdge + iconTitleGap;
   const dotsX = width - headerMargin - 20;
   const toggleX = dotsX - toggleDotsGap - MEMO_TOGGLE_SIZE;
+  const titleAreaWidth = Math.max(20, toggleX - titleX - 8 * ratio);
   const bodyPadX = MEMO_BODY_PAD_X * ratio;
   const canResize = isSelected && isSelectTool(tool);
 
@@ -165,6 +183,12 @@ export default function MemoItem({
       listening={isItemListeningTool(tool)}
       onMouseDown={handleGroupMouseDown}
       onDblClick={() => onItemDblClick(item)}
+      onDragStart={handleDragStart}
+      dragBoundFunc={(pos) => {
+        const start = dragStartPosRef.current;
+        if (!isShiftPressed() || !start) return pos;
+        return lockToDominantAxis(pos, start);
+      }}
       onDragMove={() => onLiveChange(item)}
       onTransform={handleTransform}
       onDragEnd={onGestureEnd}
@@ -181,19 +205,38 @@ export default function MemoItem({
       {effectiveViewMode !== 'collapsed' && (
         <Rect y={headerHeight} width={width} height={bodyHeight} fill={MEMO_BODY_BG} stroke={palette.border} strokeWidth={1} cornerRadius={MEMO_BODY_CORNER_RADIUS} />
       )}
-      <Path data={MEMO_FILE_ICON_PATH} x={iconX} y={(headerHeight - 12) / 2} stroke={palette.fg} strokeWidth={1} lineCap="round" lineJoin="round" listening={false} />
-      <KonvaText
-        text={title}
-        x={titleX}
-        y={0}
+      <Group x={iconX + 6} y={(headerHeight - 12) / 2 + 6} offsetX={6} offsetY={6} scaleX={MEMO_HEADER_ICON_SCALE} scaleY={MEMO_HEADER_ICON_SCALE}>
+        <Path data={MEMO_FILE_ICON_PATH} stroke={palette.fg} strokeWidth={1} lineCap="round" lineJoin="round" listening={false} />
+      </Group>
+      <Group
+        ref={(node) => registerTitleNode(item.id, node)}
+        x={titleX + titleAreaWidth / 2}
+        y={headerHeight / 2}
+        offsetX={titleAreaWidth / 2}
+        offsetY={headerHeight / 2}
+        width={titleAreaWidth}
         height={headerHeight}
-        verticalAlign="middle"
-        fontSize={MEMO_TITLE_FONT_SIZE}
-        fontStyle="bold"
-        fontFamily={TEXT_FONT_FAMILY}
-        fill={palette.fg}
-        listening={false}
-      />
+        onDblClick={(e) => {
+          e.cancelBubble = true;
+          onTitleDblClick(item, displayTitle);
+        }}
+      >
+        <Rect width={titleAreaWidth} height={headerHeight} fill="transparent" />
+        <KonvaText
+          text={displayTitle}
+          width={titleAreaWidth}
+          height={headerHeight}
+          verticalAlign="middle"
+          fontSize={MEMO_TITLE_FONT_SIZE}
+          fontStyle="bold"
+          fontFamily={TEXT_FONT_FAMILY}
+          fill={palette.fg}
+          wrap="none"
+          ellipsis
+          visible={!isEditingTitle}
+          listening={false}
+        />
+      </Group>
       {/* 접힘/전체 보기 */}
       <Group
         x={toggleX}
@@ -209,7 +252,15 @@ export default function MemoItem({
         }}
       >
         <Rect x={-4} y={-4} width={MEMO_TOGGLE_SIZE + 8} height={MEMO_TOGGLE_SIZE + 8} fill="transparent" />
-        <Group x={MEMO_TOGGLE_SIZE / 2} y={MEMO_TOGGLE_SIZE / 2} offsetX={MEMO_TOGGLE_SIZE / 2} offsetY={MEMO_TOGGLE_SIZE / 2} rotation={toggleRotation}>
+        <Group
+          x={MEMO_TOGGLE_SIZE / 2}
+          y={MEMO_TOGGLE_SIZE / 2}
+          offsetX={6}
+          offsetY={6}
+          rotation={toggleRotation}
+          scaleX={MEMO_HEADER_ICON_SCALE}
+          scaleY={MEMO_HEADER_ICON_SCALE}
+        >
           <Path data={MEMO_CHEVRON_PATH} stroke={palette.fg} strokeWidth={1.5} lineCap="round" lineJoin="round" listening={false} />
         </Group>
       </Group>

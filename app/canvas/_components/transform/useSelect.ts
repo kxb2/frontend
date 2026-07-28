@@ -80,12 +80,8 @@ export function useSelect({ tool, items, nodeMapRef, onBringToFront, onDeleteIte
           .filter((item) => {
             const node = nodeMapRef.current.get(item.id);
             if (!node) return false;
-            const localRect = node.getClientRect(); // 부모(Layer) 기준 로컬 좌표, 회전/스케일 반영된 축맞춤 박스
-            const left = stagePos.x + localRect.x * stageScale;
-            const top = stagePos.y + localRect.y * stageScale;
-            const right = stagePos.x + (localRect.x + localRect.width) * stageScale;
-            const bottom = stagePos.y + (localRect.y + localRect.height) * stageScale;
-            return left <= box.x + box.w && right >= box.x && top <= box.y + box.h && bottom >= box.y;
+            const rect = node.getClientRect();
+            return rect.x <= box.x + box.w && rect.x + rect.width >= box.x && rect.y <= box.y + box.h && rect.y + rect.height >= box.y;
           })
           .map((item) => item.id);
         lastIds = expandMembership(idsInBox, startItems);
@@ -101,7 +97,18 @@ export function useSelect({ tool, items, nodeMapRef, onBringToFront, onDeleteIte
             w: lastBox.w / stageScale,
             h: lastBox.h / stageScale,
           };
-          onCreateSection(logicalBox, lastIds);
+          const memberIds = startItems
+            .filter((item) => {
+              if (item.type === 'section') return false;
+              const node = nodeMapRef.current.get(item.id);
+              if (!node) return false;
+              const rect = node.getClientRect();
+              const cx = rect.x + rect.width / 2;
+              const cy = rect.y + rect.height / 2;
+              return cx >= lastBox.x && cx <= lastBox.x + lastBox.w && cy >= lastBox.y && cy <= lastBox.y + lastBox.h;
+            })
+            .map((item) => item.id);
+          onCreateSection(logicalBox, memberIds);
         } else {
           onBringToFront(lastIds);
         }

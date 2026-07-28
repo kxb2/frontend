@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type Konva from 'konva';
 import type { MemoCanvasItem } from '@/types/canvas';
-import { MEMO_WIDTH, getMemoContentWidth, measureMemo } from '@/app/canvas/_components/tools/memo/layout';
+import { MEMO_MIN_WIDTH, MEMO_WIDTH, getMemoContentWidth, measureMemo } from '@/app/canvas/_components/tools/memo/layout';
 import { trackWindowGesture } from '@/app/canvas/_components/core/utils';
 import { horizontalPartOf, verticalPartOf, type ResizeHandle } from '@/app/canvas/_components/transform/math';
 
@@ -57,9 +57,9 @@ export function useMemoResize({ screenToLogical, onUpdateItems }: UseMemoResizeP
         let height = startHeight;
         let x = startX;
         let y = startY;
-        if (horizontal === 'right') width = Math.max(160, startWidth + dx);
+        if (horizontal === 'right') width = Math.max(MEMO_MIN_WIDTH, startWidth + dx);
         if (horizontal === 'left') {
-          width = Math.max(160, startWidth - dx);
+          width = Math.max(MEMO_MIN_WIDTH, startWidth - dx);
           x = startX + (startWidth - width);
         }
         if (vertical === 'bottom') height = Math.max(20, startHeight + dy);

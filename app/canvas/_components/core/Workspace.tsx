@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Canvas, { type CanvasHandle } from '@/app/canvas/_components/core/Canvas';
 import { useHistory } from '@/app/canvas/_components/core/useHistory';
 import Toolbar, { Tool } from '@/app/canvas/_components/core/Toolbar';
-import { computeMemoTotalHeight } from '@/app/canvas/_components/tools/memo/layout';
+import { computeMemoTotalHeight, getMemoContentWidth, measureMemo, MEMO_DEFAULT_CONTENT_HEIGHT, MEMO_WIDTH } from '@/app/canvas/_components/tools/memo/layout';
 import { rotateAround } from '@/app/canvas/_components/core/utils';
 import { saveCanvas, uploadCanvasAttachment } from '@/app/api/canvas/api';
 import { toSaveRequest } from '@/app/api/canvas/adapter';
@@ -17,6 +17,8 @@ function genId() {
 }
 
 const SAVE_DEBOUNCE_MS = 1000;
+// 삭제 직후 이 시간 안에 Ctrl+Z 하면 서버에 저장이 아예 안 나간 상태라 첨부파일이 지워질 일도 없음
+const DELETE_SAVE_GRACE_MS = 8000;
 
 export type SaveState = 'saving' | 'saved' | 'error';
 
@@ -164,9 +166,13 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     });
   }
 
+  // 삭제로부터 유예 시간이 남아있는 동안은 저장 자체를 미룸(아래 저장 effect가 참조)
+  const deleteGraceDeadlineRef = useRef<number | null>(null);
+
   // 선택 요소 삭제 (섹션이 삭제 대상이면 소속 아이템도 함께 삭제)
   function deleteItems(ids: string[]) {
     if (ids.length === 0) return;
+    deleteGraceDeadlineRef.current = Date.now() + DELETE_SAVE_GRACE_MS;
     commitDoc((prev) => {
       const idSet = new Set(ids);
       prev.items.forEach((item) => {
@@ -179,22 +185,36 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     });
   }
 
-  function addMemoItem(x: number, y: number) {
+  // width/height를 주면 그 크기로, 안 주면 기본 크기로 생성
+  function addMemoItem(x: number, y: number, width?: number, height?: number) {
     const id = genId();
     // 지금까지 나와 있는 최대 번호+1로 정함
     const maxSeq = items.reduce((max, item) => (item.type === 'memo' ? Math.max(max, item.seq) : max), 0);
     const seq = maxSeq + 1;
     commitDoc((prev) => ({
       ...prev,
-      items: [...prev.items, { id, type: 'memo' as const, text: '', color: 'default' as const, seq, viewMode: 'full' as const, x, y, rotate: 0 }],
+      items: [...prev.items, { id, type: 'memo' as const, text: '', color: 'default' as const, seq, viewMode: 'full' as const, x, y, rotate: 0, width, height: height ?? MEMO_DEFAULT_CONTENT_HEIGHT }],
     }));
     return id;
   }
 
+  // 편집을 마칠 때 그동안 실시간으로 따라가던 내용 기준 높이를 그대로 저장
   function editItemText(id: string, text: string) {
     commitDoc((prev) => ({
       ...prev,
-      items: prev.items.map((item) => (item.id === id && item.type === 'memo' ? { ...item, text } : item)),
+      items: prev.items.map((item) => {
+        if (item.id !== id || item.type !== 'memo') return item;
+        const height = measureMemo(text, getMemoContentWidth(item.width ?? MEMO_WIDTH));
+        return { ...item, text, height };
+      }),
+    }));
+  }
+
+  // 빈 문자열로 지우면 커스텀 제목을 해제하고 자동 번호 제목으로 되돌림
+  function editItemTitle(id: string, title: string) {
+    commitDoc((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => (item.id === id && item.type === 'memo' ? { ...item, title: title.trim() || undefined } : item)),
     }));
   }
 
@@ -327,17 +347,21 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     // 업로드 중(blob: 미리보기)이면 저장 보류
     const hasPendingUpload = doc.items.some((item) => (item.type === 'image' || item.type === 'video') && item.src.startsWith('blob:'));
     pendingDocRef.current = hasPendingUpload ? null : doc;
+    // 최근 삭제로부터 유예 시간이 남아있으면 그만큼 더 기다림(그 사이엔 다른 편집을 더 해도 저장 자체가 안 나감)
+    const graceRemaining = deleteGraceDeadlineRef.current ? deleteGraceDeadlineRef.current - Date.now() : 0;
+    const delay = Math.max(SAVE_DEBOUNCE_MS, graceRemaining);
     const saveTimeout = hasPendingUpload
       ? undefined
       : setTimeout(() => {
           pendingDocRef.current = null;
+          deleteGraceDeadlineRef.current = null;
           saveCanvas(canvasId, toSaveRequest(doc))
             .then(() => {
               saveLastSavedAt(String(canvasId), new Date().toISOString()); // 백엔드 updatedAt이 저장해도 안 바뀌어서 직접 기록
               onSaveStateChange('saved');
             })
             .catch(() => onSaveStateChange('error'));
-        }, SAVE_DEBOUNCE_MS);
+        }, delay);
 
     const raf = requestAnimationFrame(() => {
       const thumbnail = canvasRef.current?.getThumbnail();
@@ -381,6 +405,7 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
         onGroupItems={groupItems}
         onUngroupItems={ungroupItems}
         onEditItemText={editItemText}
+        onEditItemTitle={editItemTitle}
         onSetMemoColor={setMemoColor}
         onSetMemoViewMode={cycleMemoViewMode}
         onToolChange={setTool}
