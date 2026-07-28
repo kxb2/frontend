@@ -21,6 +21,7 @@ interface CanvasKonvaItemProps {
   showIndividualBorder: boolean;
   isEditing: boolean;
   liveText?: string; // 메모 편집 중 textarea 실시간 입력된 값
+  isEditingTitle: boolean;
   liveResize?: MemoLiveResize; // 메모 테두리 크기 조절 중 실시간 폭/높이/위치
   sectionLiveResize?: SectionLiveResize; // 섹션 변 드래그 크기 조절 중 실시간 폭/높이/위치
   mediaLiveResize?: ItemLiveResize; // 이미지/영상 변 드래그 크기 조절 중 실시간 폭/높이/위치
@@ -34,10 +35,12 @@ interface CanvasKonvaItemProps {
   onGestureEnd: () => void;
   onLiveChange: (item: CanvasItem) => void;
   onItemDblClick: (item: CanvasItem) => void;
+  onTitleDblClick: (item: CanvasItem, currentDisplayTitle: string) => void;
   onTaintCanvas: () => void; // CORS 없이 그려진 이미지/영상이 있어 캔버스가 오염됐음을 신고 (썸네일 캡처 스킵용)
   onMemoLiveOverride: (id: string, value: MemoLiveResize | null) => void; // 섹션 전파/다중선택 리사이즈 중 메모의 실시간 내용 기준 크기를 신고
   registerNode: (id: string, node: Konva.Group | null) => void;
   registerEditableNode: (id: string, node: Konva.Node | null) => void;
+  registerTitleNode: (id: string, node: Konva.Node | null) => void;
   registerMenuNode: (id: string, node: Konva.Group | null) => void;
 }
 
@@ -52,6 +55,7 @@ export default function CanvasKonvaItem({
   showIndividualBorder,
   isEditing,
   liveText,
+  isEditingTitle,
   liveResize,
   sectionLiveResize,
   mediaLiveResize,
@@ -65,10 +69,12 @@ export default function CanvasKonvaItem({
   onGestureEnd,
   onLiveChange,
   onItemDblClick,
+  onTitleDblClick,
   onTaintCanvas,
   onMemoLiveOverride,
   registerNode,
   registerEditableNode,
+  registerTitleNode,
   registerMenuNode,
 }: CanvasKonvaItemProps) {
   if (item.type === 'image' || item.type === 'video') {
@@ -101,6 +107,7 @@ export default function CanvasKonvaItem({
         showIndividualBorder={showIndividualBorder}
         isEditing={isEditing}
         liveText={liveText}
+        isEditingTitle={isEditingTitle}
         liveResize={liveResize}
         onSelect={onSelect}
         onConnectorStart={onConnectorStart}
@@ -110,9 +117,11 @@ export default function CanvasKonvaItem({
         onGestureEnd={onGestureEnd}
         onLiveChange={onLiveChange}
         onItemDblClick={onItemDblClick}
+        onTitleDblClick={onTitleDblClick}
         onMemoLiveOverride={onMemoLiveOverride}
         registerNode={registerNode}
         registerEditableNode={registerEditableNode}
+        registerTitleNode={registerTitleNode}
         registerMenuNode={registerMenuNode}
       />
     );

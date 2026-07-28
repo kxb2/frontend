@@ -12,8 +12,9 @@ function itemToElementIn(item: CanvasItem): CanvasElementIn {
     parentClientKey: item.parentId ?? null,
   };
   if (item.type === 'memo') {
-    // memoTitle 필드에 seq를 실어서 보내고, 조회 시 그대로 읽어와 순번이 저장/조회 순서와 무관하게 항상 같게 함
-    return { ...base, width: item.width ?? null, height: item.height ?? null, memoContent: item.text, memoColor: item.color, memoTitle: String(item.seq) };
+    // memoTitle 하나에 "seq::커스텀제목"으로 함께 실어보냄
+    const memoTitle = item.title && item.title.trim() ? `${item.seq}::${item.title}` : String(item.seq);
+    return { ...base, width: item.width ?? null, height: item.height ?? null, memoContent: item.text, memoColor: item.color, memoTitle };
   }
   if (item.type === 'section') {
     return { ...base, width: item.width, height: item.height };
@@ -31,6 +32,16 @@ export function toSaveRequest(doc: CanvasDocument, storyboardId?: number | null)
   };
 }
 
+// itemToElementIn에서 "seq::커스텀제목" 형식으로 합쳐 보낸 memoTitle을 다시 분리
+function parseMemoTitle(raw: string | null): { seq: number | null; title: string | undefined } {
+  if (!raw) return { seq: null, title: undefined };
+  const sepIndex = raw.indexOf('::');
+  const seqPart = sepIndex === -1 ? raw : raw.slice(0, sepIndex);
+  const titlePart = sepIndex === -1 ? undefined : raw.slice(sepIndex + 2);
+  const seq = Number(seqPart);
+  return { seq: Number.isFinite(seq) && seq > 0 ? seq : null, title: titlePart || undefined };
+}
+
 // 캔버스 조회/저장 응답을 로컬 문서로 역변환
 export function fromDetailResponse(detail: CanvasDetailResponse): CanvasDocument {
   // 서버 element id -> clientKey(로컬 item.id) 매핑 (parentElementId/커넥터의 fromElementId·toElementId를 되돌리는 데 사용)
@@ -46,14 +57,15 @@ export function fromDetailResponse(detail: CanvasDetailResponse): CanvasDocument
     const base = { id, x: element.x, y: element.y, rotate: element.rotation ?? 0, parentId };
 
     if (element.type === 'memo') {
-      const savedSeq = Number(element.memoTitle);
+      const { seq: savedSeq, title } = parseMemoTitle(element.memoTitle);
       legacyMemoSeq += 1;
       return {
         ...base,
         type: 'memo' as const,
         text: element.memoContent ?? '',
         color: (element.memoColor as MemoColor | null) ?? 'default',
-        seq: Number.isFinite(savedSeq) && savedSeq > 0 ? savedSeq : legacyMemoSeq,
+        seq: savedSeq ?? legacyMemoSeq,
+        title,
         viewMode: 'full' as const,
         width: element.width ?? undefined,
         height: element.height ?? undefined,

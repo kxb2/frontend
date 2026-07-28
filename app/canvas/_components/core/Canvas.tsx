@@ -10,6 +10,7 @@ import Lines from '@/app/canvas/_components/tools/connector/Lines';
 import Handles from '@/app/canvas/_components/tools/connector/Handles';
 import Overlay from '@/app/canvas/_components/transform/Overlay';
 import MemoEdit from '@/app/canvas/_components/tools/memo/MemoEdit';
+import MemoTitleEdit from '@/app/canvas/_components/tools/memo/MemoTitleEdit';
 import MemoColorPicker from '@/app/canvas/_components/tools/memo/MemoColorPicker';
 import { useMemoEdit } from '@/app/canvas/_components/tools/memo/useMemoEdit';
 import { useMemoColorPicker } from '@/app/canvas/_components/tools/memo/useMemoColorPicker';
@@ -27,7 +28,7 @@ import { useViewport } from '@/app/canvas/_components/core/useViewport';
 import { expandSectionChildrenIds } from '@/app/canvas/_components/transform/useSelect';
 import { isSelectTool } from '@/app/canvas/_components/core/Toolbar';
 import { MEMO_PALETTE } from '@/app/canvas/_components/tools/memo/layout';
-import { getItemDisplaySize } from '@/app/canvas/_components/core/utils';
+import { getItemDisplaySize, trackWindowGesture } from '@/app/canvas/_components/core/utils';
 import Minimap from '@/app/canvas/_components/core/Minimap';
 
 // 섹션/미디어 꼭짓점 컨트롤 공통 설정
@@ -82,6 +83,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
     onGroupItems,
     onUngroupItems,
     onEditItemText,
+    onEditItemTitle,
     onSetMemoColor,
     onSetMemoViewMode,
     onToolChange,
@@ -103,7 +105,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
   const commitScheduledRef = useRef(false);
   const childDragLastPosRef = useRef(new Map<string, { x: number; y: number }>());
 
-  const { size, scale, stagePos, setStagePos, handleWheel, screenToLogical } = useViewport({ rootRef, gridRef, stageRef });
+  const { size, scale, stagePos, setStagePos, handleWheel, screenToLogical } = useViewport({ rootRef, gridRef, stageRef, items });
 
   // 캔버스 썸네일
   const hasMedia = items.some((item) => item.type === 'image' || item.type === 'video');
@@ -170,7 +172,37 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
     clearConnectorSelectionRef.current = clearConnectorSelection;
   }, [clearConnectorSelection]);
 
-  const { editingItemId, overlayRect, draftText, registerEditableNode, startEditing, handlePlacementClick, handleFinishEditing, handleDraftChange } = useMemoEdit({
+  // 휠(가운데) 버튼 드래그로 팬 (어떤 도구를 쓰고 있든 항상 가능)
+  function handleMiddleClickPan(e: Konva.KonvaEventObject<MouseEvent>) {
+    if (e.evt.button !== 1) return false;
+    e.evt.preventDefault();
+    const startClientX = e.evt.clientX;
+    const startClientY = e.evt.clientY;
+    const startStagePos = stagePos;
+    trackWindowGesture((moveEvent) => {
+      setStagePos({ x: startStagePos.x + (moveEvent.clientX - startClientX), y: startStagePos.y + (moveEvent.clientY - startClientY) });
+    }, () => {});
+    return true;
+  }
+
+  const {
+    editingItemId,
+    overlayRect,
+    draftText,
+    dragBox,
+    registerEditableNode,
+    startEditing,
+    handlePlacementMouseDown,
+    handleFinishEditing,
+    handleDraftChange,
+    editingTitleId,
+    titleOverlayRect,
+    draftTitle,
+    registerTitleNode,
+    startEditingTitle,
+    handleFinishEditingTitle,
+    handleTitleDraftChange,
+  } = useMemoEdit({
     items,
     scale,
     stagePos,
@@ -178,6 +210,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
     screenToLogical,
     onAddMemoItem,
     onEditItemText,
+    onEditItemTitle,
     onToolChange,
     onFinishSelect: selectOnly,
   });
@@ -312,6 +345,30 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         return { id, x, y, rotate, parentId };
       })
       .filter((patch): patch is Exclude<typeof patch, null> => !!patch);
+
+    // 이번 제스처로 "섹션 자신"이 이동/변형됐으면, 그 새 영역에 새로 걸리는 아이템도 편입
+    patches
+      .filter((patch) => itemsById.get(patch.id)?.type === 'section')
+      .forEach((sectionPatch) => {
+        const sectionNode = nodeMapRef.current.get(sectionPatch.id);
+        if (!sectionNode) return;
+        const sectionRect = sectionNode.getClientRect();
+        items.forEach((candidate) => {
+          if (candidate.type === 'section') return;
+          if (candidate.parentId === sectionPatch.id) return;
+          if (patches.some((p) => p.id === candidate.id)) return;
+          const node = nodeMapRef.current.get(candidate.id);
+          if (!node) return;
+          const rect = node.getClientRect();
+          // 아이템 자신의 40% 이상이 섹션 안에 들어와야 편입
+          const overlapWidth = Math.max(0, Math.min(rect.x + rect.width, sectionRect.x + sectionRect.width) - Math.max(rect.x, sectionRect.x));
+          const overlapHeight = Math.max(0, Math.min(rect.y + rect.height, sectionRect.y + sectionRect.height) - Math.max(rect.y, sectionRect.y));
+          const itemArea = rect.width * rect.height;
+          if (itemArea <= 0 || (overlapWidth * overlapHeight) / itemArea < 0.4) return;
+          patches.push({ id: candidate.id, x: node.x() - node.offsetX(), y: node.y() - node.offsetY(), rotate: node.rotation(), parentId: sectionPatch.id });
+        });
+      });
+
     if (patches.length > 0) onUpdateItems(patches);
     // 이번 제스처에서 쓰인 라이브 오버라이드는 커밋했으니 비움 (안 비우면 다음 렌더에서 방금 커밋한 실제 값 대신 낡은 오버라이드가 계속 우선 적용됨)
     if (memoLiveOverrides.size > 0) setMemoLiveOverrides(new Map());
@@ -363,6 +420,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
     if (item.parentId || item.groupId) selectOnly(item.id);
     if (item.type !== 'memo') return;
     startEditing(item.id);
+  }
+
+  // 제목 영역 더블클릭: 본문 편집 대신 제목 편집 시작
+  function handleTitleDblClick(item: CanvasItem, currentDisplayTitle: string) {
+    if (item.parentId || item.groupId) selectOnly(item.id);
+    if (item.type !== 'memo') return;
+    startEditingTitle(item.id, currentDisplayTitle);
   }
 
   // 선택된 노드를 Transformer에 결합/분리
@@ -450,6 +514,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         showIndividualBorder={showIndividualBorder(item)}
         isEditing={editingItemId === item.id}
         liveText={editingItemId === item.id ? draftText : undefined}
+        isEditingTitle={editingTitleId === item.id}
         liveResize={item.type === 'memo' ? (liveResize?.id === item.id ? liveResize : memoLiveOverrides.get(item.id)) : undefined}
         sectionLiveResize={sectionLiveResize ?? undefined}
         mediaLiveResize={mediaLiveResize ?? undefined}
@@ -464,10 +529,12 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         onGestureEnd={scheduleCommit}
         onLiveChange={handleItemLiveChange}
         onItemDblClick={handleItemDblClick}
+        onTitleDblClick={handleTitleDblClick}
         onTaintCanvas={markCanvasTainted}
         onMemoLiveOverride={setMemoLiveOverride}
         registerNode={registerNode}
         registerEditableNode={registerEditableNode}
+        registerTitleNode={registerTitleNode}
       />
     );
   }
@@ -504,8 +571,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         draggable={tool === 'hand'}
         onWheel={handleWheel}
         onMouseDown={(e) => {
+          if (handleMiddleClickPan(e)) return;
           handleStageMouseDown(e);
-          handlePlacementClick(tool, e);
+          handlePlacementMouseDown(tool, e);
         }}
         onDragMove={(e) => {
           if (e.target !== stageRef.current) return;
@@ -559,6 +627,16 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         />
       )}
 
+      {editingTitleId && titleOverlayRect && (
+        <MemoTitleEdit
+          editingTitleId={editingTitleId}
+          draftTitle={draftTitle}
+          overlayRect={titleOverlayRect}
+          onFinishEditing={handleFinishEditingTitle}
+          onChangeTitle={handleTitleDraftChange}
+        />
+      )}
+
       {openMemoId && colorPickerRect && colorPickerItem?.type === 'memo' && (
         <MemoColorPicker
           rect={colorPickerRect}
@@ -575,6 +653,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         <div
           className="pointer-events-none absolute border border-primary bg-primary/10"
           style={{ left: selectionBox.x, top: selectionBox.y, width: selectionBox.w, height: selectionBox.h }}
+        />
+      )}
+
+      {dragBox && (
+        <div
+          className="pointer-events-none absolute border border-primary bg-primary/10"
+          style={{ left: dragBox.x, top: dragBox.y, width: dragBox.w, height: dragBox.h }}
         />
       )}
 
