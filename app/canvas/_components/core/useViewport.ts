@@ -2,12 +2,16 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type Konva from 'konva';
 import type { CanvasItem } from '@/types/canvas';
 import { getItemDisplaySize } from '@/app/canvas/_components/core/utils';
+import { loadLastViewport, saveLastViewport } from '@/app/utils/lastViewport';
+
+const VIEWPORT_SAVE_DEBOUNCE_MS = 500;
 
 interface UseViewportParams {
   rootRef: RefObject<HTMLDivElement | null>;
   gridRef: RefObject<HTMLDivElement | null>;
   stageRef: RefObject<Konva.Stage | null>;
-  items: CanvasItem[]; // 최초 진입 시 뷰포트를 중앙 정렬
+  items: CanvasItem[]; // 최초 진입 시 뷰포트를 중앙 정렬(저장된 마지막 화면이 없을 때만 사용)
+  canvasId: string; // 마지막 화면 위치/배율을 캔버스별로 구분해서 기억하는 데 사용
 }
 
 const MIN_SCALE = 0.2;
@@ -32,7 +36,7 @@ function computeContentBounds(items: CanvasItem[]) {
 }
 
 // Stage의 팬/줌 상태(scale, stagePos)와 그 계산에 필요한 헬퍼(휠 줌, 화면→논리 좌표 변환)를 관리
-export function useViewport({ rootRef, gridRef, stageRef, items }: UseViewportParams) {
+export function useViewport({ rootRef, gridRef, stageRef, items, canvasId }: UseViewportParams) {
   const [size, setSize] = useState({ width: 800, height: 600 });
   const [scale, setScale] = useState(0.8);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
@@ -47,6 +51,13 @@ export function useViewport({ rootRef, gridRef, stageRef, items }: UseViewportPa
 
       if (!hasCenteredRef.current && rect.width > 0 && rect.height > 0) {
         hasCenteredRef.current = true;
+        // 마지막으로 저장해둔 화면 위치/배율이 있으면 그걸 그대로 복원, 없으면(최초 진입) 콘텐츠 중앙 정렬
+        const saved = loadLastViewport(canvasId);
+        if (saved) {
+          setScale(saved.scale);
+          setStagePos({ x: saved.x, y: saved.y });
+          return;
+        }
         const bounds = computeContentBounds(items);
         const contentCenter = bounds ? { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 } : { x: 0, y: 0 };
         setStagePos({ x: rect.width / 2 - contentCenter.x * scale, y: rect.height / 2 - contentCenter.y * scale });
@@ -55,7 +66,7 @@ export function useViewport({ rootRef, gridRef, stageRef, items }: UseViewportPa
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 중앙 정렬은 최초 1회만(hasCenteredRef로 가드), items/scale 변화에 재실행 불필요
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 중앙 정렬/복원은 최초 1회만(hasCenteredRef로 가드), items/scale 변화에 재실행 불필요
   }, [rootRef]);
 
   // 그리드는 줌 영향 안 받는 별도 레이어에 그리고 배율/위치만 동기화
@@ -64,6 +75,15 @@ export function useViewport({ rootRef, gridRef, stageRef, items }: UseViewportPa
     gridRef.current.style.backgroundSize = `${64 * scale}px ${64 * scale}px`;
     gridRef.current.style.backgroundPosition = `${stagePos.x}px ${stagePos.y}px`;
   }, [gridRef, scale, stagePos]);
+
+  // 화면 위치/배율이 바뀌면 디바운스 후 기억, 최초 복원/중앙정렬이 끝나기 전엔 아직 확정 안 된 기본값이라 저장하지 않음
+  useEffect(() => {
+    if (!hasCenteredRef.current) return;
+    const timeout = setTimeout(() => {
+      saveLastViewport(canvasId, { scale, x: stagePos.x, y: stagePos.y });
+    }, VIEWPORT_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [scale, stagePos, canvasId]);
 
   function handleWheel(e: Konva.KonvaEventObject<WheelEvent>) {
     e.evt.preventDefault();

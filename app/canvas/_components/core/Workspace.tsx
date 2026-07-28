@@ -90,11 +90,21 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
   async function addFiles(files: FileList | File[], position?: { x: number; y: number }) {
     const fileArray = Array.from(files).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
     if (fileArray.length === 0) return;
-    const baseX = position ? position.x : 200;
-    const baseY = position ? position.y : 200;
     const sizes = await Promise.all(fileArray.map(measureFileSize));
     const cellWidth = Math.max(...sizes.map((s) => s.width)) + DROP_GRID_GAP;
     const cellHeight = Math.max(...sizes.map((s) => s.height)) + DROP_GRID_GAP;
+    // 놓을 위치가 정해진 경우엔 그 지점을 좌상단으로, 안 정해졌으면 보이는 캔버스 영역 중앙에 오도록 배치
+    let baseX = position?.x ?? 200;
+    let baseY = position?.y ?? 200;
+    if (!position) {
+      const center = canvasRef.current?.getViewportCenter();
+      if (center) {
+        const cols = Math.min(DROP_GRID_COLS, fileArray.length);
+        const rows = Math.ceil(fileArray.length / DROP_GRID_COLS);
+        baseX = center.x - (cols * cellWidth) / 2;
+        baseY = center.y - (rows * cellHeight) / 2;
+      }
+    }
     const newItems = fileArray.map((file, index) => ({
       id: genId(),
       type: file.type.startsWith('video/') ? ('video' as const) : ('image' as const),
@@ -387,6 +397,7 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     <>
       <Canvas
         ref={canvasRef}
+        canvasId={String(canvasId)}
         tool={tool}
         items={items}
         connectors={connectors}
