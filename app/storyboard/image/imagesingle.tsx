@@ -69,7 +69,7 @@ export default function ImageSingle({ imageUrl, isLoading }: ImageSingleProps) {
                 />
               </svg>
 
-              <p className="text-[clamp(0.75rem,3cqw,1.25rem)] text-text-primary font-light">
+              <p className="text-[clamp(8px,3cqw,16px)] text-text-primary font-light">
                 생성된 스토리보드가 여기에 표시됩니다.
                 <br />
                 스토리보드를 생성해보세요!

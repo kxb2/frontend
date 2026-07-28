@@ -286,7 +286,7 @@ function StoryboardInner() {
                 {/* 그라데이션은 3가지 색상을 넣는 것이 좋다 판단되었음 */}
                 {/* absolute + 부모 relative로 스크롤 영역과 완전히 분리, 항상 사이드바 하단에 떠 있음. z-50으로 항상 위에 보이도록 */}
                 <button
-                  className="absolute left-4 right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary shadow-lg disabled:opacity-60"
+                  className="absolute h-11 left-4 right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-purple-500 via-pink-400 to-orange-300 py-2.5 text-sm font-semibold text-text-primary shadow-lg disabled:opacity-60"
                   onClick={handleSubmit}
                   disabled={isSubmitting || Boolean(generation && integratedPrompt)}
                 >
