@@ -51,7 +51,7 @@ function ItemActionsMenu({ onRename, onDelete }: ItemActionsMenuProps) {
         <PencilLineIcon className="size-4" />
         <span className="text-caption-12">이름 바꾸기</span>
       </button>
-      <button type="button" onClick={onDelete} className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-[#cc0126]">
+      <button type="button" onClick={onDelete} className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-error">
         <TrashIcon className="size-4" />
         <span className="text-caption-12">삭제하기</span>
       </button>
