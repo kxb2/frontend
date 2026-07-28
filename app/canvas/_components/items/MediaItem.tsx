@@ -5,6 +5,7 @@ import type Konva from 'konva';
 import { Group, Image as KonvaImage, Rect, RegularPolygon, Text as KonvaText } from 'react-konva';
 import type { MediaCanvasItem } from '@/types/canvas';
 import { isItemListeningTool, isSelectTool, type Tool } from '@/app/canvas/_components/core/Toolbar';
+import { isShiftPressed, lockToDominantAxis } from '@/app/canvas/_components/core/utils';
 import type { ItemLiveResize } from '@/app/canvas/_components/transform/useItemResize';
 import type { ResizeHandle } from '@/app/canvas/_components/transform/math';
 import { ResizeEdges } from '@/app/canvas/_components/transform/ResizeEdges';
@@ -64,6 +65,7 @@ export default function MediaItem({
   const groupRef = useRef<Konva.Group>(null);
   const imageRef = useRef<Konva.Image>(null);
   const videoElRef = useRef<HTMLVideoElement | null>(null);
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (item.type === 'image') {
@@ -218,6 +220,16 @@ export default function MediaItem({
     else onSelect(e, item);
   }
 
+  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
+    dragStartPosRef.current = { x: e.target.x(), y: e.target.y() };
+  }
+
+  function handleDragBoundFunc(pos: { x: number; y: number }) {
+    const start = dragStartPosRef.current;
+    if (!isShiftPressed() || !start) return pos;
+    return lockToDominantAxis(pos, start);
+  }
+
   // 정상 렌더링과 로드-실패 자리표시자가 공유하는 Group 속성
   function groupProps(x: number, y: number, width: number, height: number) {
     return {
@@ -252,7 +264,7 @@ export default function MediaItem({
     const failedWidth = item.width ?? 120;
     const failedHeight = item.height ?? 80;
     return (
-      <Group ref={setGroupRef} {...groupProps(item.x, item.y, failedWidth, failedHeight)}>
+      <Group ref={setGroupRef} {...groupProps(item.x, item.y, failedWidth, failedHeight)} onDragStart={handleDragStart} dragBoundFunc={handleDragBoundFunc}>
         <Rect width={failedWidth} height={failedHeight} fill="rgba(58,63,77,0.5)" stroke="#6b7280" strokeWidth={1} dash={[6, 4]} cornerRadius={4} />
         <KonvaText text="파일을 불러올 수 없음" width={failedWidth} height={failedHeight} align="center" verticalAlign="middle" fontSize={12} fill="#9ca3af" listening={false} />
         {showIndividualBorder && <Rect width={failedWidth} height={failedHeight} stroke="#c255ff" strokeWidth={2} listening={false} />}
@@ -267,7 +279,13 @@ export default function MediaItem({
   const renderHeight = liveResize?.height ?? item.height ?? mediaSize.height;
   const controlScale = 1 / stageScale;
   return (
-    <Group ref={setGroupRef} {...groupProps(effectiveX, effectiveY, renderWidth, renderHeight)} onDblClick={() => onItemDblClick(item)}>
+    <Group
+      ref={setGroupRef}
+      {...groupProps(effectiveX, effectiveY, renderWidth, renderHeight)}
+      onDblClick={() => onItemDblClick(item)}
+      onDragStart={handleDragStart}
+      dragBoundFunc={handleDragBoundFunc}
+    >
       <KonvaImage ref={imageRef} image={source} width={renderWidth} height={renderHeight} />
       {/* 다중 선택 시 그룹 테두리와 별도로 개별 테두리도 노출 */}
       {showIndividualBorder && <Rect width={renderWidth} height={renderHeight} stroke="#c255ff" strokeWidth={2} listening={false} />}

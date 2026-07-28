@@ -4,7 +4,7 @@ import { MEMO_WIDTH } from '@/app/canvas/_components/tools/memo/layout';
 // 아이템 타입별 기본 크기(폭/높이 미지정 시), 대략적 크기만 필요할 때 사용
 export function getItemDisplaySize(item: CanvasItem): { width: number; height: number } {
   if (item.type === 'section') return { width: item.width, height: item.height };
-  if (item.type === 'memo') return { width: item.width ?? MEMO_WIDTH, height: item.height ?? 80 };
+  if (item.type === 'memo') return { width: item.width ?? MEMO_WIDTH, height: item.height ?? 120 };
   return { width: item.width ?? 160, height: item.height ?? 107 };
 }
 
@@ -41,4 +41,26 @@ export function rotateAround(px: number, py: number, cx: number, cy: number, ang
     x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
     y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
   };
+}
+
+// Shift 키 눌림 상태를 전역으로 추적 (드래그 축 고정용)
+let shiftPressed = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift') shiftPressed = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift') shiftPressed = false;
+  });
+}
+
+export function isShiftPressed() {
+  return shiftPressed;
+}
+
+// 드래그 시작점(start) 대비 더 많이 움직인 축으로만 pos를 제한(수평/수직 고정). ref는 호출부(dragBoundFunc 내부)에서 직접 읽어서 넘겨야 함
+export function lockToDominantAxis(pos: { x: number; y: number }, start: { x: number; y: number }) {
+  const dx = Math.abs(pos.x - start.x);
+  const dy = Math.abs(pos.y - start.y);
+  return dx > dy ? { x: pos.x, y: start.y } : { x: start.x, y: pos.y };
 }

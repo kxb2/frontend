@@ -17,6 +17,8 @@ import hero4 from '@/app/auth/images/hero-4.png';
 
 const HERO_IMAGES = [hero1, hero2, hero3, hero4];
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+// FedCM 의무화 전, 이 시간 안에 로그인 콜백이 안 오면 그냥 로딩 상태만 풀어줌
+const GOOGLE_PROMPT_TIMEOUT_MS = 10000;
 
 // GIS 공식 라이브러리(initialize + prompt)로 우리 버튼의 진짜 클릭에서 idToken을 받음.
 function GoogleSignInButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
@@ -35,16 +37,13 @@ function GoogleSignInButton({ onCredential, disabled }: { onCredential: (idToken
     try {
       await loadGoogleIdentityScript();
       if (!window.google) throw new Error('Google 로그인 스크립트를 불러오지 못했습니다.');
+      const promptTimeout = setTimeout(() => setIsRequesting(false), GOOGLE_PROMPT_TIMEOUT_MS);
       initializeGoogleIdentity(GOOGLE_CLIENT_ID, (idToken) => {
+        clearTimeout(promptTimeout);
         setIsRequesting(false);
         onCredentialRef.current(idToken);
       });
-      window.google.accounts.id.prompt((notification) => {
-        // 계정 선택 창이 안 뜨거나 사용자가 닫은 경우엔 로딩 상태만 해제(에러 아님)
-        if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-          setIsRequesting(false);
-        }
-      });
+      window.google.accounts.id.prompt();
     } catch (error) {
       console.error('Google 로그인 실패:', error);
       setIsRequesting(false);
@@ -69,11 +68,13 @@ interface LoginModalProps {
 }
 
 // 로그인/회원가입 폼에서 공통으로 쓰는 비밀번호 입력(눈 아이콘으로 표시/숨김 전환)
-function PasswordField({ placeholder, value, onChange, autoComplete }: { placeholder: string; value: string; onChange: (value: string) => void; autoComplete: string }) {
+function PasswordField({ id, name, placeholder, value, onChange, autoComplete }: { id: string; name: string; placeholder: string; value: string; onChange: (value: string) => void; autoComplete: string }) {
   const [visible, setVisible] = useState(false);
   return (
     <div className="flex h-13 w-full items-center justify-between rounded-xl border border-border-divider bg-surface p-5">
       <input
+        id={id}
+        name={name}
         type={visible ? 'text' : 'password'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -197,6 +198,8 @@ export default function LoginModal({ initialMode = 'login' }: LoginModalProps) {
 
               <div className="flex w-full flex-col items-start gap-3">
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
@@ -205,11 +208,13 @@ export default function LoginModal({ initialMode = 'login' }: LoginModalProps) {
                   required
                   className="text-caption-14 h-13 w-full rounded-xl border border-border-divider bg-surface p-5 text-text-primary placeholder:text-text-disabled focus:outline-none"
                 />
-                <PasswordField placeholder="비밀번호를 입력하세요" value={loginPassword} onChange={setLoginPassword} autoComplete="current-password" />
+                <PasswordField id="login-password" name="current-password" placeholder="비밀번호를 입력하세요" value={loginPassword} onChange={setLoginPassword} autoComplete="current-password" />
                 <div className="flex w-full items-center justify-between">
                   <label className="flex cursor-pointer items-center gap-1">
                     <span className="relative flex size-3 shrink-0 items-center justify-center">
                       <input
+                        id="remember-me"
+                        name="rememberMe"
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
@@ -235,6 +240,8 @@ export default function LoginModal({ initialMode = 'login' }: LoginModalProps) {
             <form onSubmit={handleSignupSubmit} className="flex w-full flex-col items-center gap-3">
               <div className="flex w-full flex-col items-start gap-3">
                 <input
+                  id="signup-email"
+                  name="email"
                   type="email"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
@@ -243,11 +250,13 @@ export default function LoginModal({ initialMode = 'login' }: LoginModalProps) {
                   required
                   className="text-caption-14 h-13 w-full rounded-xl border border-border-divider bg-surface p-5 text-text-primary placeholder:text-text-disabled focus:outline-none"
                 />
-                <PasswordField placeholder="비밀번호를 입력하세요" value={signupPassword} onChange={setSignupPassword} autoComplete="new-password" />
-                <PasswordField placeholder="비밀번호를 다시 입력하세요" value={signupPasswordConfirm} onChange={setSignupPasswordConfirm} autoComplete="new-password" />
+                <PasswordField id="signup-password" name="new-password" placeholder="비밀번호를 입력하세요" value={signupPassword} onChange={setSignupPassword} autoComplete="new-password" />
+                <PasswordField id="signup-password-confirm" name="new-password-confirm" placeholder="비밀번호를 다시 입력하세요" value={signupPasswordConfirm} onChange={setSignupPasswordConfirm} autoComplete="new-password" />
                 <label className="flex w-full cursor-pointer items-center gap-1">
                   <span className="relative flex size-3 shrink-0 items-center justify-center">
                     <input
+                      id="agree-to-terms"
+                      name="agreeToTerms"
                       type="checkbox"
                       checked={agreedToTerms}
                       onChange={(e) => setAgreedToTerms(e.target.checked)}

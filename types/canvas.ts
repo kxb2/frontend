@@ -26,6 +26,7 @@ export interface MemoCanvasItem extends CanvasItemBase {
   text: string;
   color: MemoColor;
   seq: number;
+  title?: string; // 사용자가 직접 지정한 제목. 없으면 자동 번호("메모 001")
   viewMode: MemoViewMode;
   width?: number;
   height?: number;
@@ -77,11 +78,12 @@ export interface CanvasProps {
   onAddConnector: (fromId: string, toId: string) => void;
   onDeleteConnector: (id: string) => void;
   onReconnectConnector: (id: string, end: 'from' | 'to', newNodeId: string) => void;
-  onAddMemoItem: (x: number, y: number) => string;
+  onAddMemoItem: (x: number, y: number, width?: number, height?: number) => string;
   onCreateSection: (box: SelectionBox, memberIds: string[]) => string; // 새 섹션 아이템을 생성하고 박스 안 기존 아이템들의 소속(parentId)을 설정, 새 섹션 id를 반환
   onGroupItems: (ids: string[]) => void; // Ctrl+G: 선택된 아이템들에 공통 groupId를 부여
   onUngroupItems: (ids: string[]) => void; // Ctrl+Shift+G: groupId만 해제
   onEditItemText: (id: string, text: string) => void;
+  onEditItemTitle: (id: string, title: string) => void;
   onSetMemoColor: (id: string, color: MemoColor) => void;
   onSetMemoViewMode: (id: string) => void;
   onToolChange: (tool: Tool) => void;
