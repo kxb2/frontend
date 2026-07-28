@@ -67,6 +67,7 @@ export interface CanvasEntry {
 }
 
 export interface CanvasProps {
+  canvasId: string; // 마지막 화면 위치/배율을 캔버스별로 구분해서 기억
   tool: Tool;
   items: CanvasItem[];
   connectors: Connector[];
