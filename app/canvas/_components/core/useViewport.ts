@@ -72,8 +72,9 @@ export function useViewport({ rootRef, gridRef, stageRef, items }: UseViewportPa
 
     // Ctrl/Cmd+휠일 때만 확대/축소, 그 외엔 팬(Shift 누르면 세로 휠 입력을 가로 이동)
     if (!(e.evt.ctrlKey || e.evt.metaKey)) {
-      const dx = e.evt.shiftKey ? e.evt.deltaY : e.evt.deltaX;
-      const dy = e.evt.shiftKey ? 0 : e.evt.deltaY;
+      const shiftRedirect = e.evt.shiftKey && e.evt.deltaX === 0;
+      const dx = shiftRedirect ? e.evt.deltaY : e.evt.deltaX;
+      const dy = shiftRedirect ? 0 : e.evt.deltaY;
       setStagePos((prev) => ({ x: prev.x - dx, y: prev.y - dy }));
       return;
     }
