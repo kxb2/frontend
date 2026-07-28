@@ -8,6 +8,7 @@ import { computeMemoScalePatch } from '@/app/canvas/_components/tools/memo/layou
 import type { MemoLiveResize } from '@/app/canvas/_components/tools/memo/useMemoResize';
 import type { SectionLiveResize, SectionResizeHandle } from '@/app/canvas/_components/tools/section/useSectionResize';
 import { isItemListeningTool, isSelectTool, type Tool } from '@/app/canvas/_components/core/Toolbar';
+import { isShiftPressed, lockToDominantAxis } from '@/app/canvas/_components/core/utils';
 import { ResizeEdges } from '@/app/canvas/_components/transform/ResizeEdges';
 
 interface SectionItemProps {
@@ -45,6 +46,8 @@ export default function SectionItem({
   registerNode,
 }: SectionItemProps) {
   const lastPos = useRef({ x: 0, y: 0 });
+  // 드래그 시작 위치 고정 스냅샷
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
   // 다중선택 Transformer 리사이즈 시작 시점의 섹션/자식 top-left 스냅샷 (라이브 스케일 비율 계산의 기준)
   const transformStart = useRef<{ x: number; y: number; children: Array<{ id: string; x: number; y: number }> } | null>(null);
 
@@ -59,6 +62,7 @@ export default function SectionItem({
 
   function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     lastPos.current = { x: e.target.x(), y: e.target.y() };
+    dragStartPosRef.current = { x: e.target.x(), y: e.target.y() };
   }
 
   // 섹션을 드래그하면 소속 아이템들도 같은 델타만큼 명령형으로 함께 이동
@@ -146,13 +150,18 @@ export default function SectionItem({
       listening={isItemListeningTool(tool)}
       onMouseDown={handleGroupMouseDown}
       onDragStart={handleDragStart}
+      dragBoundFunc={(pos) => {
+        const start = dragStartPosRef.current;
+        if (!isShiftPressed() || !start) return pos;
+        return lockToDominantAxis(pos, start);
+      }}
       onDragMove={handleDragMove}
       onDragEnd={onGestureEnd}
       onTransformStart={handleTransformStart}
       onTransform={handleTransform}
       onTransformEnd={onGestureEnd}
     >
-      <Rect width={width} height={height} fill="rgba(57,66,87,0.2)" stroke="#394257" strokeWidth={1} cornerRadius={8} />
+      <Rect width={width} height={height} fill="rgba(57,66,87,0.4)" stroke="#394257" strokeWidth={1} cornerRadius={8} />
       {showIndividualBorder && <Rect width={width} height={height} stroke="#c255ff" strokeWidth={2} listening={false} />}
       {canResize && <ResizeEdges width={width} height={height} onEdgeMouseDown={(edge, e) => onResizeStart(edge, item, e)} />}
     </Group>
