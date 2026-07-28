@@ -221,7 +221,8 @@ export default function MediaItem({
   }
 
   function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
-    dragStartPosRef.current = { x: e.target.x(), y: e.target.y() };
+    // dragBoundFunc의 pos는 스테이지 컨테이너 기준 절대좌표라, node.x()/y()(로컬 좌표)와 섞어서 비교하면 안 됨
+    dragStartPosRef.current = e.target.getAbsolutePosition();
   }
 
   function handleDragBoundFunc(pos: { x: number; y: number }) {

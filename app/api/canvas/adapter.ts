@@ -12,9 +12,7 @@ function itemToElementIn(item: CanvasItem): CanvasElementIn {
     parentClientKey: item.parentId ?? null,
   };
   if (item.type === 'memo') {
-    // memoTitle 하나에 "seq::커스텀제목"으로 함께 실어보냄
-    const memoTitle = item.title && item.title.trim() ? `${item.seq}::${item.title}` : String(item.seq);
-    return { ...base, width: item.width ?? null, height: item.height ?? null, memoContent: item.text, memoColor: item.color, memoTitle };
+    return { ...base, width: item.width ?? null, height: item.height ?? null, memoContent: item.text, memoColor: item.color, memoTitle: item.title?.trim() || null };
   }
   if (item.type === 'section') {
     return { ...base, width: item.width, height: item.height };
@@ -32,14 +30,12 @@ export function toSaveRequest(doc: CanvasDocument, storyboardId?: number | null)
   };
 }
 
-// itemToElementIn에서 "seq::커스텀제목" 형식으로 합쳐 보낸 memoTitle을 다시 분리
-function parseMemoTitle(raw: string | null): { seq: number | null; title: string | undefined } {
-  if (!raw) return { seq: null, title: undefined };
+function parseMemoTitle(raw: string | null): string | undefined {
+  if (!raw) return undefined;
   const sepIndex = raw.indexOf('::');
-  const seqPart = sepIndex === -1 ? raw : raw.slice(0, sepIndex);
-  const titlePart = sepIndex === -1 ? undefined : raw.slice(sepIndex + 2);
-  const seq = Number(seqPart);
-  return { seq: Number.isFinite(seq) && seq > 0 ? seq : null, title: titlePart || undefined };
+  if (sepIndex !== -1) return raw.slice(sepIndex + 2) || undefined;
+  if (/^\d+$/.test(raw)) return undefined;
+  return raw;
 }
 
 // 캔버스 조회/저장 응답을 로컬 문서로 역변환
@@ -48,24 +44,18 @@ export function fromDetailResponse(detail: CanvasDetailResponse): CanvasDocument
   const localIdByServerId = new Map<number, string>();
   detail.elements.forEach((element) => localIdByServerId.set(element.id, element.clientKey ?? String(element.id)));
 
-  // 메모 순번(seq): memoTitle에 저장해둔 값을 우선 사용(저장/조회 순서가 바뀌어도 항상 같은 번호가 나옴).
-  // memoTitle이 없는 예전 데이터만, 등장 순서로 번호를 채워 넣는 예전 방식으로 대체
-  let legacyMemoSeq = 0;
   const items: CanvasItem[] = detail.elements.map((element) => {
     const id = element.clientKey ?? String(element.id);
     const parentId = element.parentElementId !== null ? localIdByServerId.get(element.parentElementId) : undefined;
     const base = { id, x: element.x, y: element.y, rotate: element.rotation ?? 0, parentId };
 
     if (element.type === 'memo') {
-      const { seq: savedSeq, title } = parseMemoTitle(element.memoTitle);
-      legacyMemoSeq += 1;
       return {
         ...base,
         type: 'memo' as const,
         text: element.memoContent ?? '',
         color: (element.memoColor as MemoColor | null) ?? 'default',
-        seq: savedSeq ?? legacyMemoSeq,
-        title,
+        title: parseMemoTitle(element.memoTitle),
         viewMode: 'full' as const,
         width: element.width ?? undefined,
         height: element.height ?? undefined,
