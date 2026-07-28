@@ -327,7 +327,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
         let width: number | undefined;
         let height: number | undefined;
         if (item?.type === 'memo') {
-          ({ width, height } = computeMemoScalePatch(item, sx));
+          // 순수 이동/회전(스케일 변화 없음)이면 굳이 재계산하지 않음
+          if (sx !== 1 || sy !== 1) ({ width, height } = computeMemoScalePatch(item, sx));
         } else if (item?.type === 'image' || item?.type === 'video' || item?.type === 'section') {
           width = node.width() * sx;
           height = node.height() * sy;

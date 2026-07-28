@@ -25,8 +25,7 @@ export interface MemoCanvasItem extends CanvasItemBase {
   type: 'memo';
   text: string;
   color: MemoColor;
-  seq: number;
-  title?: string; // 사용자가 직접 지정한 제목. 없으면 자동 번호("메모 001")
+  title?: string; // 사용자가 직접 지정한 제목. 없으면 기본 표시("메모")
   viewMode: MemoViewMode;
   width?: number;
   height?: number;

@@ -97,7 +97,8 @@ export default function MemoItem({
   }
 
   function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
-    dragStartPosRef.current = { x: e.target.x(), y: e.target.y() };
+    // dragBoundFunc의 pos는 스테이지 컨테이너 기준 절대좌표라, node.x()/y()(로컬 좌표)와 섞어서 비교하면 안 됨
+    dragStartPosRef.current = e.target.getAbsolutePosition();
   }
 
   // 커넥터/선택 툴에 따라 이벤트 분기
@@ -116,8 +117,10 @@ export default function MemoItem({
   // 세로 조절 로직 (메모 본문)
   const textForSizing = isEditing && liveText !== undefined ? liveText : item.text;
   const naturalContentHeight = useMemo(() => measureMemo(textForSizing, contentWidth), [textForSizing, contentWidth]); // 텍스트/폭이 그대로면 재계산을 건너뛰도록 메모이즈
-  // 편집 중에는 저장된 높이 대신 타이핑되는 내용에 맞춰 실시간으로 늘어나거나 줄어듦
-  const contentHeight = liveResize?.height ?? (isEditing ? naturalContentHeight : (item.height ?? naturalContentHeight));
+  // 편집을 시작한 뒤로 실제로 타이핑을 한 적이 있을 때만 내용 기준 높이로 실시간 추적 -- 아니면 드래그로
+  // 만든 크기(또는 기본 생성 높이)가 편집모드 진입 직후(아직 한 글자도 안 쳤는데) 순간적으로 무너져 보임
+  const hasTypedSinceEditStart = isEditing && liveText !== undefined && liveText !== item.text;
+  const contentHeight = liveResize?.height ?? (hasTypedSinceEditStart ? naturalContentHeight : (item.height ?? naturalContentHeight));
   const [scrollOffset, setScrollOffset] = useState(0);
   const maxScroll = Math.max(0, naturalContentHeight - contentHeight);
   const effectiveScroll = Math.min(scrollOffset, maxScroll);
@@ -127,9 +130,8 @@ export default function MemoItem({
     e.evt.preventDefault();
     setScrollOffset((prev) => Math.min(maxScroll, Math.max(0, prev + e.evt.deltaY)));
   }
-  // 직접 지정한 제목이 있으면 그걸, 없으면 seq 기준 자동 번호 제목을 보여줌
-  const autoTitle = `메모 ${String(item.seq).padStart(3, '0')}`;
-  const displayTitle = item.title?.trim() ? item.title : autoTitle;
+  // 직접 지정한 제목이 있으면 그걸, 없으면 고정 기본값을 보여줌
+  const displayTitle = item.title?.trim() ? item.title : '메모';
   const headerHeight = MEMO_HEADER_HEIGHT;
   // 편집 중에는 접힘 모드여도 항상 전체 보기로 전환
   const effectiveViewMode: MemoViewMode = isEditing ? 'full' : item.viewMode;
