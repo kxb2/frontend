@@ -41,6 +41,7 @@ const DIAGONAL_CORNER_CONFIG: Record<CornerAnchor, { handle: ResizeHandle; curso
 
 export interface CanvasHandle {
   getThumbnail: () => string | undefined;
+  getViewportCenter: () => { x: number; y: number };
 }
 
 const THUMBNAIL_PIXEL_RATIO = 0.2;
@@ -68,6 +69,7 @@ function renderFallbackThumbnail(items: CanvasItem[], scale: number, stagePos: {
 
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
   {
+    canvasId,
     tool,
     items,
     connectors,
@@ -105,11 +107,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
   const commitScheduledRef = useRef(false);
   const childDragLastPosRef = useRef(new Map<string, { x: number; y: number }>());
 
-  const { size, scale, stagePos, setStagePos, handleWheel, screenToLogical } = useViewport({ rootRef, gridRef, stageRef, items });
+  const { size, scale, stagePos, setStagePos, handleWheel, screenToLogical } = useViewport({ rootRef, gridRef, stageRef, items, canvasId });
 
   // 캔버스 썸네일
   const hasMedia = items.some((item) => item.type === 'image' || item.type === 'video');
   useImperativeHandle(ref, () => ({
+    // 지금 화면에 보이는 캔버스 영역의 중심을 논리 좌표로 변환 (기본 배치 지점)
+    getViewportCenter: () => ({ x: (size.width / 2 - stagePos.x) / scale, y: (size.height / 2 - stagePos.y) / scale }),
     getThumbnail: () => {
       if (taintedRef.current || hasMedia) return renderFallbackThumbnail(items, scale, stagePos, size.width, size.height);
       // 선택 테두리가 썸네일에 찍히지 않도록 캡처 시 숨김
