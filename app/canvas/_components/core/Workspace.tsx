@@ -188,12 +188,9 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
   // width/height를 주면 그 크기로, 안 주면 기본 크기로 생성
   function addMemoItem(x: number, y: number, width?: number, height?: number) {
     const id = genId();
-    // 지금까지 나와 있는 최대 번호+1로 정함
-    const maxSeq = items.reduce((max, item) => (item.type === 'memo' ? Math.max(max, item.seq) : max), 0);
-    const seq = maxSeq + 1;
     commitDoc((prev) => ({
       ...prev,
-      items: [...prev.items, { id, type: 'memo' as const, text: '', color: 'default' as const, seq, viewMode: 'full' as const, x, y, rotate: 0, width, height: height ?? MEMO_DEFAULT_CONTENT_HEIGHT }],
+      items: [...prev.items, { id, type: 'memo' as const, text: '', color: 'default' as const, viewMode: 'full' as const, x, y, rotate: 0, width, height: height ?? MEMO_DEFAULT_CONTENT_HEIGHT }],
     }));
     return id;
   }
@@ -203,7 +200,7 @@ export default function Workspace({ canvasId, initialDoc, onSaveStateChange, onT
     commitDoc((prev) => ({
       ...prev,
       items: prev.items.map((item) => {
-        if (item.id !== id || item.type !== 'memo') return item;
+        if (item.id !== id || item.type !== 'memo' || text === item.text) return item;
         const height = measureMemo(text, getMemoContentWidth(item.width ?? MEMO_WIDTH));
         return { ...item, text, height };
       }),

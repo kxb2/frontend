@@ -62,7 +62,8 @@ export default function SectionItem({
 
   function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     lastPos.current = { x: e.target.x(), y: e.target.y() };
-    dragStartPosRef.current = { x: e.target.x(), y: e.target.y() };
+    // dragBoundFunc의 pos는 스테이지 컨테이너 기준 절대좌표라, node.x()/y()(로컬 좌표)와 섞어서 비교하면 안 됨
+    dragStartPosRef.current = e.target.getAbsolutePosition();
   }
 
   // 섹션을 드래그하면 소속 아이템들도 같은 델타만큼 명령형으로 함께 이동
